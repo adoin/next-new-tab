@@ -7,6 +7,7 @@
 **Architecture:** Vue 3 SPA 作为 new tab 页面，Background service worker 处理 API 请求和缓存，chrome.storage.sync 存配置和书签，chrome.storage.local 存壁纸缓存。
 
 **Tech Stack:** Vue 3, Vite 8, @crxjs/vite-plugin 2.4.0, UnoCSS, TypeScript, Pinia
+**Package Manager:** pnpm
 
 ---
 
@@ -64,14 +65,14 @@ src/
 
 ```bash
 cd D:/workspace/next-new-tab
-npm init -y
+pnpm init
 ```
 
 - [ ] **Step 2: 安装依赖**
 
 ```bash
-npm install vue@3 pinia
-npm install -D vite@8 @crxjs/vite-plugin@2.4.0 typescript @vitejs/plugin-vue unocss @unocss/reset vitest
+pnpm add vue@3 pinia
+pnpm add -D vite@8 @crxjs/vite-plugin@2.4.0 typescript @vitejs/plugin-vue unocss @unocss/reset vitest vue-tsc
 ```
 
 - [ ] **Step 3: 创建 vite.config.ts**
@@ -236,7 +237,7 @@ chrome.runtime.onInstalled.addListener(() => {
 - [ ] **Step 13: 验证构建**
 
 ```bash
-npm run build
+pnpm build
 ```
 
 Expected: 构建成功，在 `dist/` 生成扩展文件。
@@ -1760,7 +1761,7 @@ onMounted(() => {
 - [ ] **Step 2: 验证构建**
 
 ```bash
-npm run build
+pnpm build
 ```
 
 Expected: 构建成功，无 TS 错误。
@@ -1779,7 +1780,7 @@ git commit -m "feat: integrate all components in App.vue"
 - [ ] **Step 1: 构建验证**
 
 ```bash
-npm run build
+pnpm build
 ```
 
 Expected: `dist/` 目录包含完整扩展文件，manifest.json 正确。
