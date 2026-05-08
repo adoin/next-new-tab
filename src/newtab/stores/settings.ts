@@ -4,8 +4,14 @@ import type { Settings, SearchEngine } from '../types'
 import { DEFAULT_SETTINGS, DEFAULT_ENGINES } from '../types'
 
 export const useSettingsStore = defineStore('settings', () => {
-  const { data: settings, ready: settingsReady } = useStorage<Settings>('settings', { ...DEFAULT_SETTINGS })
-  const { data: engines } = useStorage<SearchEngine[]>('engines', [...DEFAULT_ENGINES])
+  const { data: settings, ready: settingsReady } = useStorage<Settings>('settings', { ...DEFAULT_SETTINGS }, 'local')
+  const { data: engines, ready: enginesReady } = useStorage<SearchEngine[]>('engines', [...DEFAULT_ENGINES])
+
+  enginesReady.then(() => {
+    if (!Array.isArray(engines.value)) {
+      engines.value = [...DEFAULT_ENGINES]
+    }
+  })
 
   function updateSettings(partial: Partial<Settings>) {
     Object.assign(settings.value, partial)

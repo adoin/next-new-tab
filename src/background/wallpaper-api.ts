@@ -22,11 +22,19 @@ async function getBingDaily(): Promise<Wallpaper> {
   }
 }
 
-// Random wallpaper (redirect — works as image URL)
-function getRandomWallpaper(source: RandomWallpaperSource): Wallpaper {
+// Random wallpaper — fetch image and return as data URL so it persists across tabs
+async function getRandomWallpaper(source: RandomWallpaperSource): Promise<Wallpaper> {
   const sep = source.url.includes('?') ? '&' : '?'
   const url = `${source.url}${sep}_t=${Date.now()}`
-  return { url, author: '', source: source.name }
+  const res = await fetch(url)
+  const blob = await res.blob()
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+  return { url: dataUrl, author: '', source: source.name }
 }
 
 // 360 wallpaper — categories
@@ -57,7 +65,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         if (source.id === 'bing') {
           return { ok: true, data: await getBingDaily() }
         }
-        return { ok: true, data: getRandomWallpaper(source) }
+        return { ok: true, data: await getRandomWallpaper(source) }
       } catch (e: any) {
         return { ok: false, error: e.message }
       }

@@ -2,9 +2,29 @@ import { ref, watch } from 'vue'
 import type { Wallpaper, Wallpaper360Category, Wallpaper360Item } from '../types'
 import { useSettingsStore } from '../stores'
 import { RANDOM_WALLPAPER_SOURCES } from '../types'
-import { cacheWallpaper, getCachedWallpaper } from './useWallpaperCache'
 
 const PAGE_SIZE = 30
+const IMAGE_STORE_KEY = 'wallpaper-image'
+const MAX_STORE_BYTES = 4.5 * 1024 * 1024 // chrome.storage.local 5MB limit
+
+async function saveImageData(dataUrl: string): Promise<boolean> {
+  if (dataUrl.length > MAX_STORE_BYTES) return false
+  try {
+    await chrome.storage.local.set({ [IMAGE_STORE_KEY]: dataUrl })
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function loadImageData(): Promise<string | null> {
+  try {
+    const result = await chrome.storage.local.get(IMAGE_STORE_KEY)
+    return (result[IMAGE_STORE_KEY] as string) || null
+  } catch {
+    return null
+  }
+}
 
 export function useWallpaper() {
   const settings = useSettingsStore()
@@ -15,11 +35,12 @@ export function useWallpaper() {
   let refreshTimer: ReturnType<typeof setInterval> | null = null
 
   async function restoreSaved() {
-    if (!settings.settings.wallpaperUrl) return
-    // try cache first for instant display
-    const cached = await getCachedWallpaper()
+    // try dedicated image store first, fall back to settings URL
+    const cached = await loadImageData()
+    const url = cached || settings.settings.wallpaperUrl
+    if (!url) return
     current.value = {
-      url: cached || settings.settings.wallpaperUrl,
+      url,
       author: settings.settings.wallpaperAuthor || '',
       source: '',
     }
@@ -39,14 +60,17 @@ export function useWallpaper() {
         payload: { source },
       })
       if (result.ok) {
-        const blobUrl = await cacheWallpaper(result.data.url)
+        const url: string = result.data.url
         current.value = {
-          url: blobUrl || result.data.url,
+          url,
           author: result.data.author || '',
           source: result.data.source || '',
         }
+        // persist image to dedicated store (skip if too large)
+        await saveImageData(url)
+        // always record fetch time and metadata
         settings.updateSettings({
-          wallpaperUrl: result.data.url,
+          wallpaperUrl: '',
           wallpaperAuthor: result.data.author || '',
           randomLastFetchTime: Date.now(),
         })
@@ -82,7 +106,7 @@ export function useWallpaper() {
   async function initRandom() {
     const elapsed = Date.now() - settings.settings.randomLastFetchTime
     const intervalMs = settings.settings.randomAutoRefreshMin * 60 * 1000
-    if (!settings.settings.wallpaperUrl || elapsed >= intervalMs) {
+    if (settings.settings.randomLastFetchTime === 0 || elapsed >= intervalMs) {
       await fetchRandom()
     } else {
       await restoreSaved()
@@ -147,11 +171,10 @@ export function useWallpaper() {
     fetchWallpapers(activeCategoryId.value, p)
   }
 
-  async function setManualWallpaper(item: Wallpaper360Item) {
+  function setManualWallpaper(item: Wallpaper360Item) {
     const url = item.url || item.url_mobile || item.url_mid || item.url_thumb || ''
     if (!url) return
-    const blobUrl = await cacheWallpaper(url)
-    current.value = { url: blobUrl || url, author: item.utag || '', source: '360' }
+    current.value = { url, author: item.utag || '', source: '360' }
     settings.updateSettings({ wallpaperUrl: url, wallpaperAuthor: item.utag || '' })
     manualWallpaperChosen.value = true
   }
@@ -193,7 +216,7 @@ export function useWallpaper() {
         await fetchWallpapers(activeCategoryId.value, 1)
       }
     } else {
-      // switching back to random: just restore cached, don't force a new fetch
+      // switching back to random: just restore saved, don't force a new fetch
       await restoreSaved()
       startAutoRefresh()
     }

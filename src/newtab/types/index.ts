@@ -110,8 +110,7 @@ export const DEFAULT_ENGINES: SearchEngine[] = [
   { id: 'bing', name: 'Bing', icon: '🔎', urlTemplate: 'https://www.bing.com/search?q=%s', isAi: false, builtin: true },
   { id: 'baidu', name: '百度', icon: '🅱️', urlTemplate: 'https://www.baidu.com/s?wd=%s', isAi: false, builtin: true },
   { id: 'duckduckgo', name: 'DuckDuckGo', icon: '🦆', urlTemplate: 'https://duckduckgo.com/?q=%s', isAi: false, builtin: true },
-  { id: 'doubao', name: '豆包', icon: '🫘', urlTemplate: 'https://www.doubao.com/chat/?q=%s', isAi: true },
-  { id: 'gemini', name: 'Gemini', icon: '✦', urlTemplate: 'https://gemini.google.com/app?q=%s', isAi: true },
-  { id: 'chatgpt', name: 'ChatGPT', icon: '💬', urlTemplate: 'https://chatgpt.com/?q=%s', isAi: true },
-  { id: 'deepseek', name: 'DeepSeek', icon: '🔮', urlTemplate: 'https://chat.deepseek.com/?q=%s', isAi: true },
+  { id: 'doubao', name: '豆包', icon: '🫘', urlTemplate: 'https://www.doubao.com/chat/url-action?action={"pluginId":"Send_Message","payload":{"text":"%s"}}', isAi: true },
+  { id: 'gemini', name: 'Gemini', icon: '✦', urlTemplate: 'https://www.google.com/search?udm=50&q=%s', isAi: true },
+  { id: 'chatgpt', name: 'ChatGPT', icon: '💬', urlTemplate: 'https://chatgpt.com/?q=%s&hints=search&temporary-chat=true', isAi: true },
 ]
