@@ -14,7 +14,7 @@ function flushWrites(area: StorageArea) {
   const batch: Record<string, any> = {}
   for (const k of keys) batch[k] = pending[k]
   writeQueues[area] = {}
-  chrome.storage[area].set(batch)
+  chrome.storage[area].set(batch, () => {})
 }
 
 function enqueueWrite(area: StorageArea, key: string, value: any) {
@@ -23,36 +23,73 @@ function enqueueWrite(area: StorageArea, key: string, value: any) {
   writeTimers[area] = setTimeout(() => flushWrites(area), 2000)
 }
 
-export function useStorage<T>(key: string, defaultValue: T, area: StorageArea = 'sync'): { data: Ref<T>; ready: Promise<void> } {
+function writeImmediate(area: StorageArea, key: string, value: any) {
+  if (writeTimers[area]) {
+    clearTimeout(writeTimers[area])
+    writeTimers[area] = null
+  }
+  chrome.storage[area].set({ [key]: value }, () => {})
+  delete writeQueues[area][key]
+}
+
+// Flush all pending writes immediately (for page unload)
+export function flushAllWrites() {
+  flushWrites('sync')
+  flushWrites('local')
+}
+
+// Register unload handler once
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', flushAllWrites)
+}
+
+export function useStorage<T>(key: string, defaultValue: T, area: StorageArea = 'sync'): { data: Ref<T>; ready: Promise<void>; flush: () => void } {
   const data = ref<T>(defaultValue) as Ref<T>
   const storage = chrome.storage[area]
+  let isLoading = true
 
   const ready = storage.get(key).then((result) => {
-    if (result[key] !== undefined) {
-      if (Array.isArray(defaultValue) && !Array.isArray(result[key])) {
-        data.value = defaultValue as T
-        enqueueWrite(area, key, defaultValue)
+    const stored = result[key]
+
+    if (stored !== undefined && stored !== null) {
+      if (Array.isArray(defaultValue)) {
+        if (Array.isArray(stored)) {
+          data.value = stored as T
+        } else if (typeof stored === 'object') {
+          const arr = Object.values(stored)
+          data.value = arr.length > 0 ? (arr as T) : (defaultValue as T)
+        } else {
+          data.value = defaultValue as T
+        }
       } else {
-        data.value = result[key] as T
+        data.value = stored as T
       }
     }
+
+    isLoading = false
   })
 
+  // Watch for changes and save
   watch(data, (val) => {
+    if (isLoading) return
     enqueueWrite(area, key, val)
   }, { deep: true })
 
+  // Listen for changes from other tabs
   chrome.storage.onChanged.addListener((changes, changeArea) => {
     if (changeArea === area && changes[key]) {
       const newVal = changes[key].newValue as T
-      if (Array.isArray(defaultValue) && !Array.isArray(newVal)) {
-        data.value = defaultValue as T
-        enqueueWrite(area, key, defaultValue)
+      if (Array.isArray(defaultValue)) {
+        if (Array.isArray(newVal)) data.value = newVal
       } else {
         data.value = newVal
       }
     }
   })
 
-  return { data, ready }
+  function flush() {
+    writeImmediate(area, key, data.value)
+  }
+
+  return { data, ready, flush }
 }

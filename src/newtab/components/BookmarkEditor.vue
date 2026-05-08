@@ -19,19 +19,77 @@ const form = ref({
   description: '',
   url: '',
   icon: '',
+  iconBgColor: 'transparent',
   colSpan: 1,
   rowSpan: 1,
 })
+
+const hexColor = ref('#000000')
+const alpha = ref(0)
+const useBgColor = ref(false)
+
+function parseRgba(str: string) {
+  if (!str || str === 'transparent') return { r: 0, g: 0, b: 0, a: 0 }
+  const match = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/)
+  if (match) {
+    return {
+      r: parseInt(match[1]),
+      g: parseInt(match[2]),
+      b: parseInt(match[3]),
+      a: match[4] !== undefined ? parseFloat(match[4]) : 1,
+    }
+  }
+  return { r: 0, g: 0, b: 0, a: 0 }
+}
+
+function rgbaToHex(r: number, g: number, b: number) {
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')
+}
+
+function hexToRgba(hex: string) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16),
+  } : { r: 0, g: 0, b: 0 }
+}
+
+function updateFormColor() {
+  if (!useBgColor.value) {
+    form.value.iconBgColor = 'transparent'
+  } else {
+    const { r, g, b } = hexToRgba(hexColor.value)
+    form.value.iconBgColor = `rgba(${r}, ${g}, ${b}, ${alpha.value})`
+  }
+}
+
+watch([hexColor, alpha, useBgColor], updateFormColor)
 
 watch(() => props.visible, (v) => {
   if (v && props.editId) {
     const list = Array.isArray(bookmarks.bookmarks) ? bookmarks.bookmarks : []
     const bm = list.find((b) => b.id === props.editId)
     if (bm) {
-      form.value = { title: bm.title, description: bm.description, url: bm.url, icon: bm.icon, colSpan: bm.colSpan, rowSpan: bm.rowSpan }
+      form.value = {
+        title: bm.title,
+        description: bm.description,
+        url: bm.url,
+        icon: bm.icon,
+        iconBgColor: bm.iconBgColor || 'transparent',
+        colSpan: bm.colSpan,
+        rowSpan: bm.rowSpan,
+      }
+      const parsed = parseRgba(bm.iconBgColor)
+      useBgColor.value = parsed.a > 0
+      hexColor.value = rgbaToHex(parsed.r, parsed.g, parsed.b)
+      alpha.value = parsed.a
     }
   } else if (v) {
-    form.value = { title: '', description: '', url: '', icon: '', colSpan: 1, rowSpan: 1 }
+    form.value = { title: '', description: '', url: '', icon: '', iconBgColor: 'transparent', colSpan: 1, rowSpan: 1 }
+    hexColor.value = '#000000'
+    alpha.value = 0
+    useBgColor.value = false
   }
 })
 
@@ -42,6 +100,7 @@ function onSave() {
   } else {
     bookmarks.addBookmark({ ...form.value })
   }
+  bookmarks.flush()
   emit('close')
 }
 </script>
@@ -68,6 +127,29 @@ function onSave() {
           <div>
             <label class="text-white/70 text-sm block mb-1">图标 URL</label>
             <input v-model="form.icon" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white outline-none" placeholder="留空自动获取 favicon" />
+          </div>
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <label class="text-white/70 text-sm">图标背景色</label>
+              <label class="flex items-center gap-1.5 text-white/50 text-xs cursor-pointer">
+                <input type="checkbox" v-model="useBgColor" class="accent-blue-400" />
+                <span>启用</span>
+              </label>
+            </div>
+            <div v-if="useBgColor" class="space-y-2 pl-1">
+              <div class="flex items-center gap-3">
+                <input
+                  v-model="hexColor"
+                  type="color"
+                  class="w-10 h-10 rounded cursor-pointer bg-transparent"
+                />
+                <div class="flex-1">
+                  <label class="text-white/50 text-xs block mb-1">透明度 {{ Math.round(alpha * 100) }}%</label>
+                  <input v-model.number="alpha" type="range" min="0" max="1" step="0.01" class="w-full accent-blue-400" />
+                </div>
+              </div>
+              <div class="text-white/40 text-xs">预览: {{ form.iconBgColor }}</div>
+            </div>
           </div>
           <div class="flex gap-4">
             <div>

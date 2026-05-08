@@ -87,15 +87,6 @@ onUnmounted(() => {
       &#x1f5bc;
     </button>
 
-    <!-- importer -->
-    <button
-      class="glass w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full"
-      @click="showImporter = true"
-      title="从浏览器导入书签"
-    >
-      &#x1f4e5;
-    </button>
-
     <!-- settings -->
     <button
       class="glass w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full"
@@ -111,6 +102,7 @@ onUnmounted(() => {
     :visible="showSettings"
     @close="showSettings = false"
     @open-picker="showPicker = true"
+    @open-importer="showImporter = true; showSettings = false"
   />
   <WallpaperPicker
     :visible="showPicker"

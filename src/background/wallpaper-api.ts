@@ -40,10 +40,8 @@ async function getRandomWallpaper(source: RandomWallpaperSource): Promise<Wallpa
 // 360 wallpaper — categories
 async function get360Categories() {
   const url = 'http://wallpaper.apc.360.cn/index.php?c=WallPaperAndroid&a=getAllCategories'
-  console.log('[wallpaper-api] Fetching 360 categories from:', url)
   const res = await fetch(url)
   const json = await res.json()
-  console.log('[wallpaper-api] 360 categories response:', json)
   return json.data || []
 }
 
@@ -57,7 +55,6 @@ async function get360ByCategory(cid: string, start: number, count: number) {
 
 // Message handler
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  console.log('[wallpaper-api] Received message:', msg.type)
   if (msg.type === 'RANDOM_WALLPAPER_GET') {
     const { source } = msg.payload as { source: RandomWallpaperSource }
     const handler = async () => {

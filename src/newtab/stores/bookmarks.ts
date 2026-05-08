@@ -35,7 +35,7 @@ async function fetchHighResIcon(url: string): Promise<string> {
 }
 
 export const useBookmarksStore = defineStore('bookmarks', () => {
-  const { data: bookmarks, ready } = useStorage<Bookmark[]>('bookmarks', [])
+  const { data: bookmarks, ready, flush } = useStorage<Bookmark[]>('bookmarks', [], 'sync')
 
   function ensureArray() {
     if (!Array.isArray(bookmarks.value)) {
@@ -43,7 +43,14 @@ export const useBookmarksStore = defineStore('bookmarks', () => {
     }
   }
 
-  ready.then(ensureArray)
+  ready.then(() => {
+    ensureArray()
+  })
+
+  function saveNow() {
+    const data = JSON.parse(JSON.stringify(bookmarks.value))
+    chrome.storage.sync.set({ bookmarks: data }, () => {})
+  }
 
   function addBookmark(bookmark: Omit<Bookmark, 'id' | 'order'>) {
     ensureArray()
@@ -51,14 +58,20 @@ export const useBookmarksStore = defineStore('bookmarks', () => {
     const order = bookmarks.value.length
     const url = normalizeUrl(bookmark.url)
     const icon = bookmark.icon || getFaviconUrl(url)
-    bookmarks.value.push({ ...bookmark, id, order, url, icon })
+    const iconBgColor = bookmark.iconBgColor || 'transparent'
+    const newBm = { ...bookmark, id, order, url, icon, iconBgColor }
+    bookmarks.value.push(newBm)
+    saveNow()
 
     // async: try to get a higher-res icon from the site itself
     if (!bookmark.icon) {
       fetchHighResIcon(url).then((hiRes) => {
         if (hiRes && hiRes !== icon) {
           const bm = bookmarks.value.find((b) => b.id === id)
-          if (bm) bm.icon = hiRes
+          if (bm) {
+            bm.icon = hiRes
+            saveNow()
+          }
         }
       })
     }
@@ -67,18 +80,23 @@ export const useBookmarksStore = defineStore('bookmarks', () => {
   function updateBookmark(id: string, partial: Partial<Bookmark>) {
     ensureArray()
     const bm = bookmarks.value.find((b) => b.id === id)
-    if (bm) Object.assign(bm, partial)
+    if (bm) {
+      Object.assign(bm, partial)
+      saveNow()
+    }
   }
 
   function removeBookmark(id: string) {
     ensureArray()
     bookmarks.value = bookmarks.value.filter((b) => b.id !== id)
     bookmarks.value.forEach((b, i) => { b.order = i })
+    saveNow()
   }
 
   function reorderBookmarks(newOrder: Bookmark[]) {
     ensureArray()
     bookmarks.value = newOrder.map((b, i) => ({ ...b, order: i }))
+    saveNow()
   }
 
   function importFromChrome(chromeBookmarks: Array<{ title: string; url: string }>) {
@@ -90,12 +108,13 @@ export const useBookmarksStore = defineStore('bookmarks', () => {
         title: bm.title || new URL(url).hostname,
         description: '',
         url,
-        icon: getFaviconUrl(url),
+        icon: '',
+        iconBgColor: 'transparent',
         colSpan: 1,
         rowSpan: 1,
       })
     }
   }
 
-  return { bookmarks, addBookmark, updateBookmark, removeBookmark, reorderBookmarks, importFromChrome }
+  return { bookmarks, addBookmark, updateBookmark, removeBookmark, reorderBookmarks, importFromChrome, flush }
 })

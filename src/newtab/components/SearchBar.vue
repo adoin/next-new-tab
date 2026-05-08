@@ -6,6 +6,17 @@ const { currentEngine, engines, search, switchEngine } = useSearch()
 const query = ref('')
 const showEngines = ref(false)
 
+function getEngineIcon(engine: { icon: string; urlTemplate: string }): string {
+  if (engine.icon.startsWith('http')) return engine.icon
+  try {
+    const url = engine.urlTemplate.replace('%s', 'test')
+    const hostname = new URL(url).hostname
+    return `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${hostname}&size=128`
+  } catch {
+    return ''
+  }
+}
+
 function onSubmit() {
   search(query.value)
 }
@@ -35,7 +46,7 @@ function onClickOutside() {
         v-model="query"
         type="text"
         :placeholder="`用 ${currentEngine.name} 搜索...`"
-        class="flex-1 bg-transparent outline-none text-white placeholder-white/50 text-lg"
+        class="flex-1 bg-transparent outline-none text-white placeholder-white/50 text-lg border-none"
       />
       <button
         type="submit"
@@ -61,7 +72,14 @@ function onClickOutside() {
             v-if="engine.id === currentEngine.id"
             class="absolute left-0 top-1 bottom-1 w-0.5 rounded-full bg-blue-400"
           />
-          <span class="text-base w-6 text-center">{{ engine.icon }}</span>
+          <img
+            v-if="getEngineIcon(engine)"
+            :src="getEngineIcon(engine)"
+            :alt="engine.name"
+            class="w-5 h-5 object-contain rounded-sm"
+            @error="($event.target as HTMLImageElement).style.display = 'none'"
+          />
+          <span v-else class="text-base w-6 text-center">{{ engine.icon }}</span>
           <span class="text-sm">{{ engine.name }}</span>
           <span v-if="engine.isAi" class="ml-auto px-1.5 py-0.5 rounded text-[10px] bg-purple-500/30 text-purple-200">AI</span>
           <span v-if="engine.builtin" class="ml-auto px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-white/40">内置</span>

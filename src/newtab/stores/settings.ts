@@ -4,8 +4,17 @@ import type { Settings, SearchEngine } from '../types'
 import { DEFAULT_SETTINGS, DEFAULT_ENGINES } from '../types'
 
 export const useSettingsStore = defineStore('settings', () => {
-  const { data: settings, ready: settingsReady } = useStorage<Settings>('settings', { ...DEFAULT_SETTINGS }, 'local')
-  const { data: engines, ready: enginesReady } = useStorage<SearchEngine[]>('engines', [...DEFAULT_ENGINES])
+  const { data: settings, ready: settingsReady } = useStorage<Settings>('settings', { ...DEFAULT_SETTINGS }, 'sync')
+  const { data: engines, ready: enginesReady } = useStorage<SearchEngine[]>('engines', [...DEFAULT_ENGINES], 'sync')
+
+  // Merge missing fields from defaults for existing users
+  settingsReady.then(() => {
+    for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) {
+      if (settings.value[key] === undefined) {
+        ;(settings.value as any)[key] = DEFAULT_SETTINGS[key]
+      }
+    }
+  })
 
   function ensureEngines() {
     if (!Array.isArray(engines.value)) {

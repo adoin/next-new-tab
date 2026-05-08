@@ -44,6 +44,7 @@ export interface Bookmark {
   description: string
   url: string
   icon: string
+  iconBgColor: string
   colSpan: number
   rowSpan: number
   order: number
@@ -72,6 +73,9 @@ export interface Settings {
   gridColumns: number
   cardRadius: number
   defaultEngineId: string
+  bookmarkCardSize: number
+  cardPadding: number
+  bookmarkOpenMode: 'newTab' | 'currentTab'
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -85,9 +89,12 @@ export const DEFAULT_SETTINGS: Settings = {
   bookmarkScale: 70,
   searchGap: 40,
   searchTopMargin: 160,
-  gridColumns: 5,
+  gridColumns: 12,
   cardRadius: 12,
   defaultEngineId: 'google',
+  bookmarkCardSize: 100,
+  cardPadding: 4,
+  bookmarkOpenMode: 'newTab',
 }
 
 export const RANDOM_WALLPAPER_SOURCES: RandomWallpaperSource[] = [

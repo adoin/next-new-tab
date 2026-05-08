@@ -9,6 +9,7 @@ defineProps<{ visible: boolean }>()
 const emit = defineEmits<{
   close: []
   openPicker: []
+  openImporter: []
 }>()
 
 const settings = useSettingsStore()
@@ -21,6 +22,16 @@ const newEngine = ref({ name: '', icon: '', urlTemplate: '', isAi: false })
 const showAddEngine = ref(false)
 const editingEngineId = ref<string | null>(null)
 const editForm = ref({ name: '', icon: '', urlTemplate: '', isAi: false })
+
+const collapsed = ref<Record<string, boolean>>({})
+
+function toggleSection(key: string) {
+  collapsed.value[key] = !collapsed.value[key]
+}
+
+function isCollapsed(key: string) {
+  return collapsed.value[key] ?? false
+}
 
 function onAddEngine() {
   if (!newEngine.value.name || !newEngine.value.urlTemplate) return
@@ -90,12 +101,18 @@ function onImport(e: Event) {
         </div>
 
         <!-- scrollable content -->
-        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        <div class="flex-1 overflow-y-auto p-6 space-y-4">
 
         <!-- Wallpaper Section -->
         <section>
-          <h3 class="text-white/80 text-sm font-bold mb-3 uppercase tracking-wider">壁纸</h3>
-          <div class="space-y-3">
+          <h3
+            class="text-white/80 text-sm font-bold uppercase tracking-wider cursor-pointer flex items-center justify-between"
+            @click="toggleSection('wallpaper')"
+          >
+            <span>壁纸</span>
+            <span class="text-white/40 transition-transform" :class="{ 'rotate-180': !isCollapsed('wallpaper') }">&#x25BC;</span>
+          </h3>
+          <div v-show="!isCollapsed('wallpaper')" class="mt-3 space-y-3">
             <div>
               <label class="text-white/60 text-xs block mb-1">模式</label>
               <select v-model="settings.settings.wallpaperMode" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white outline-none">
@@ -132,8 +149,14 @@ function onImport(e: Event) {
 
         <!-- Layout Section -->
         <section>
-          <h3 class="text-white/80 text-sm font-bold mb-3 uppercase tracking-wider">布局</h3>
-          <div class="space-y-3">
+          <h3
+            class="text-white/80 text-sm font-bold uppercase tracking-wider cursor-pointer flex items-center justify-between"
+            @click="toggleSection('layout')"
+          >
+            <span>布局</span>
+            <span class="text-white/40 transition-transform" :class="{ 'rotate-180': !isCollapsed('layout') }">&#x25BC;</span>
+          </h3>
+          <div v-show="!isCollapsed('layout')" class="mt-3 space-y-3">
             <div>
               <label class="text-white/60 text-xs block mb-1">搜索栏距顶 {{ settings.settings.searchTopMargin }}px</label>
               <input v-model.number="settings.settings.searchTopMargin" type="range" min="40" max="400" class="w-full accent-blue-400" />
@@ -148,84 +171,135 @@ function onImport(e: Event) {
             </div>
             <div>
               <label class="text-white/60 text-xs block mb-1">列数 {{ settings.settings.gridColumns }}</label>
-              <input v-model.number="settings.settings.gridColumns" type="range" min="3" max="8" class="w-full accent-blue-400" />
+              <input v-model.number="settings.settings.gridColumns" type="range" min="12" max="36" class="w-full accent-blue-400" />
             </div>
             <div>
               <label class="text-white/60 text-xs block mb-1">卡片圆角 {{ settings.settings.cardRadius }}px</label>
               <input v-model.number="settings.settings.cardRadius" type="range" min="0" max="20" class="w-full accent-blue-400" />
+            </div>
+            <div>
+              <label class="text-white/60 text-xs block mb-1">内边距 {{ settings.settings.cardPadding }}px</label>
+              <input v-model.number="settings.settings.cardPadding" type="range" min="0" max="6" class="w-full accent-blue-400" />
+            </div>
+            <div>
+              <label class="text-white/60 text-xs block mb-1">单格大小 {{ settings.settings.bookmarkCardSize }}px</label>
+              <input v-model.number="settings.settings.bookmarkCardSize" type="range" min="60" max="300" class="w-full accent-blue-400" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Behavior Section -->
+        <section>
+          <h3
+            class="text-white/80 text-sm font-bold uppercase tracking-wider cursor-pointer flex items-center justify-between"
+            @click="toggleSection('behavior')"
+          >
+            <span>行为</span>
+            <span class="text-white/40 transition-transform" :class="{ 'rotate-180': !isCollapsed('behavior') }">&#x25BC;</span>
+          </h3>
+          <div v-show="!isCollapsed('behavior')" class="mt-3 space-y-3">
+            <div>
+              <label class="text-white/60 text-xs block mb-1">打开书签</label>
+              <select v-model="settings.settings.bookmarkOpenMode" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white outline-none">
+                <option value="newTab">新标签页</option>
+                <option value="currentTab">当前标签页</option>
+              </select>
             </div>
           </div>
         </section>
 
         <!-- Search Section -->
         <section>
-          <h3 class="text-white/80 text-sm font-bold mb-3 uppercase tracking-wider">搜索引擎</h3>
-          <div class="space-y-1 mb-3">
-            <div v-for="engine in safeEngines" :key="engine.id">
-              <!-- normal display -->
-              <div
-                v-if="editingEngineId !== engine.id"
-                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-              >
-                <span class="w-5 text-center text-sm">{{ engine.icon }}</span>
-                <span class="text-white text-sm flex-1">{{ engine.name }}</span>
-                <span v-if="engine.builtin" class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/40">内置</span>
-                <span v-else-if="engine.isAi" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-200">AI</span>
-                <button
-                  v-if="!engine.builtin"
-                  class="text-white/30 hover:text-blue-400 text-sm transition-colors"
-                  @click="onStartEdit(engine)"
-                  title="编辑"
-                >&#x270E;</button>
-                <button
-                  v-if="!engine.builtin"
-                  class="text-white/30 hover:text-red-400 text-sm transition-colors"
-                  @click="settings.removeEngine(engine.id)"
-                  title="删除"
-                >&#x2715;</button>
-              </div>
-              <!-- inline edit form -->
-              <div v-else class="px-3 py-2 rounded-lg bg-white/5 space-y-2">
-                <div class="flex gap-2">
-                  <input v-model="editForm.name" class="flex-1 bg-white/10 rounded px-2 py-1 text-white text-sm outline-none" placeholder="名称" />
-                  <input v-model="editForm.icon" class="w-16 bg-white/10 rounded px-2 py-1 text-white text-sm outline-none" placeholder="图标" />
+          <h3
+            class="text-white/80 text-sm font-bold uppercase tracking-wider cursor-pointer flex items-center justify-between"
+            @click="toggleSection('search')"
+          >
+            <span>搜索引擎</span>
+            <span class="text-white/40 transition-transform" :class="{ 'rotate-180': !isCollapsed('search') }">&#x25BC;</span>
+          </h3>
+          <div v-show="!isCollapsed('search')" class="mt-3">
+            <div class="space-y-1 mb-3">
+              <div v-for="engine in safeEngines" :key="engine.id">
+                <!-- normal display -->
+                <div
+                  v-if="editingEngineId !== engine.id"
+                  class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                >
+                  <span class="w-5 text-center text-sm">{{ engine.icon }}</span>
+                  <span class="text-white text-sm flex-1">{{ engine.name }}</span>
+                  <span v-if="engine.builtin" class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/40">内置</span>
+                  <span v-else-if="engine.isAi" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-200">AI</span>
+                  <button
+                    v-if="!engine.builtin"
+                    class="text-white/30 hover:text-blue-400 text-sm transition-colors"
+                    @click="onStartEdit(engine)"
+                    title="编辑"
+                  >&#x270E;</button>
+                  <button
+                    v-if="!engine.builtin"
+                    class="text-white/30 hover:text-red-400 text-sm transition-colors"
+                    @click="settings.removeEngine(engine.id)"
+                    title="删除"
+                  >&#x2715;</button>
                 </div>
-                <input v-model="editForm.urlTemplate" class="w-full bg-white/10 rounded px-2 py-1 text-white text-sm outline-none" placeholder="URL 模板 (含 %s)" />
-                <div class="flex items-center justify-between">
-                  <label class="flex items-center gap-1.5 text-white/60 text-xs">
-                    <input type="checkbox" v-model="editForm.isAi" class="accent-purple-400" /> AI
-                  </label>
+                <!-- inline edit form -->
+                <div v-else class="px-3 py-2 rounded-lg bg-white/5 space-y-2">
                   <div class="flex gap-2">
-                    <button class="text-xs text-white/50 hover:text-white" @click="onCancelEdit">取消</button>
-                    <button class="text-xs text-blue-400 hover:text-blue-300" @click="onSaveEdit">保存</button>
+                    <input v-model="editForm.name" class="flex-1 bg-white/10 rounded px-2 py-1 text-white text-sm outline-none" placeholder="名称" />
+                    <input v-model="editForm.icon" class="w-16 bg-white/10 rounded px-2 py-1 text-white text-sm outline-none" placeholder="图标" />
+                  </div>
+                  <input v-model="editForm.urlTemplate" class="w-full bg-white/10 rounded px-2 py-1 text-white text-sm outline-none" placeholder="URL 模板 (含 %s)" />
+                  <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-1.5 text-white/60 text-xs">
+                      <input type="checkbox" v-model="editForm.isAi" class="accent-purple-400" /> AI
+                    </label>
+                    <div class="flex gap-2">
+                      <button class="text-xs text-white/50 hover:text-white" @click="onCancelEdit">取消</button>
+                      <button class="text-xs text-blue-400 hover:text-blue-300" @click="onSaveEdit">保存</button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          <button class="text-blue-300 text-sm hover:text-blue-200" @click="showAddEngine = !showAddEngine">
-            {{ showAddEngine ? '取消' : '+ 添加引擎' }}
-          </button>
-          <div v-if="showAddEngine" class="mt-2 space-y-2">
-            <input v-model="newEngine.name" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="名称" />
-            <input v-model="newEngine.icon" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="图标 (emoji 或 URL)" />
-            <input v-model="newEngine.urlTemplate" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="URL 模板 (含 %s)" />
-            <label class="flex items-center gap-2 text-white/60 text-sm">
-              <input type="checkbox" v-model="newEngine.isAi" class="accent-purple-400" /> AI 搜索
-            </label>
-            <button class="w-full px-3 py-2 rounded-lg bg-blue-500/80 text-white text-sm hover:bg-blue-500" @click="onAddEngine">添加</button>
+            <button class="text-blue-300 text-sm hover:text-blue-200" @click="showAddEngine = !showAddEngine">
+              {{ showAddEngine ? '取消' : '+ 添加引擎' }}
+            </button>
+            <div v-if="showAddEngine" class="mt-2 space-y-2">
+              <input v-model="newEngine.name" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="名称" />
+              <input v-model="newEngine.icon" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="图标 (emoji 或 URL)" />
+              <input v-model="newEngine.urlTemplate" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="URL 模板 (含 %s)" />
+              <label class="flex items-center gap-2 text-white/60 text-sm">
+                <input type="checkbox" v-model="newEngine.isAi" class="accent-purple-400" /> AI 搜索
+              </label>
+              <button class="w-full px-3 py-2 rounded-lg bg-blue-500/80 text-white text-sm hover:bg-blue-500" @click="onAddEngine">添加</button>
+            </div>
           </div>
         </section>
 
         <!-- General Section -->
         <section>
-          <h3 class="text-white/80 text-sm font-bold mb-3 uppercase tracking-wider">通用</h3>
-          <div class="flex gap-2">
-            <button class="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20" @click="onExport">导出配置</button>
-            <label class="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 text-center cursor-pointer">
-              导入配置
-              <input type="file" accept=".json" class="hidden" @change="onImport" />
-            </label>
+          <h3
+            class="text-white/80 text-sm font-bold uppercase tracking-wider cursor-pointer flex items-center justify-between"
+            @click="toggleSection('general')"
+          >
+            <span>通用</span>
+            <span class="text-white/40 transition-transform" :class="{ 'rotate-180': !isCollapsed('general') }">&#x25BC;</span>
+          </h3>
+          <div v-show="!isCollapsed('general')" class="mt-3 space-y-3">
+            <button
+              class="w-full px-4 py-3 rounded-lg bg-blue-500/60 text-white text-sm hover:bg-blue-500/80 transition-colors flex items-center justify-center gap-2"
+              @click="emit('openImporter')"
+            >
+              <span>&#x1f4e5;</span>
+              <span>从浏览器导入书签</span>
+            </button>
+            <div class="flex gap-2">
+              <button class="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20" @click="onExport">导出配置</button>
+              <label class="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 text-center cursor-pointer">
+                导入配置
+                <input type="file" accept=".json" class="hidden" @change="onImport" />
+              </label>
+            </div>
           </div>
         </section>
         </div>
