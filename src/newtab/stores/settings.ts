@@ -7,27 +7,32 @@ export const useSettingsStore = defineStore('settings', () => {
   const { data: settings, ready: settingsReady } = useStorage<Settings>('settings', { ...DEFAULT_SETTINGS }, 'local')
   const { data: engines, ready: enginesReady } = useStorage<SearchEngine[]>('engines', [...DEFAULT_ENGINES])
 
-  enginesReady.then(() => {
+  function ensureEngines() {
     if (!Array.isArray(engines.value)) {
       engines.value = [...DEFAULT_ENGINES]
     }
-  })
+  }
+
+  enginesReady.then(ensureEngines)
 
   function updateSettings(partial: Partial<Settings>) {
     Object.assign(settings.value, partial)
   }
 
   function addEngine(engine: SearchEngine) {
+    ensureEngines()
     engines.value.push(engine)
   }
 
   function removeEngine(id: string) {
+    ensureEngines()
     const engine = engines.value.find((e) => e.id === id)
     if (engine?.builtin) return
     engines.value = engines.value.filter((e) => e.id !== id)
   }
 
   function updateEngine(id: string, partial: Partial<SearchEngine>) {
+    ensureEngines()
     const engine = engines.value.find((e) => e.id === id)
     if (engine) Object.assign(engine, partial)
   }

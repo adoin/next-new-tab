@@ -25,7 +25,8 @@ const form = ref({
 
 watch(() => props.visible, (v) => {
   if (v && props.editId) {
-    const bm = bookmarks.bookmarks.find((b) => b.id === props.editId)
+    const list = Array.isArray(bookmarks.bookmarks) ? bookmarks.bookmarks : []
+    const bm = list.find((b) => b.id === props.editId)
     if (bm) {
       form.value = { title: bm.title, description: bm.description, url: bm.url, icon: bm.icon, colSpan: bm.colSpan, rowSpan: bm.rowSpan }
     }

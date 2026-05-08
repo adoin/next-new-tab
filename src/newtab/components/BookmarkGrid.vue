@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useBookmarksStore, useSettingsStore } from '../stores'
 import BookmarkCard from './BookmarkCard.vue'
 
@@ -9,6 +10,10 @@ const emit = defineEmits<{
   edit: [id: string]
   add: []
 }>()
+
+const safeBookmarks = computed(() =>
+  Array.isArray(bookmarks.bookmarks) ? bookmarks.bookmarks : [],
+)
 
 function onDelete(id: string) {
   bookmarks.removeBookmark(id)
@@ -31,7 +36,7 @@ function onDelete(id: string) {
       }"
     >
       <BookmarkCard
-        v-for="bm in bookmarks.bookmarks"
+        v-for="bm in safeBookmarks"
         :key="bm.id"
         :bookmark="bm"
         :scale="settings.settings.bookmarkScale"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useSettingsStore } from '../stores'
 import type { SearchEngine } from '../types'
 import { RANDOM_WALLPAPER_SOURCES } from '../types'
@@ -12,6 +12,10 @@ const emit = defineEmits<{
 }>()
 
 const settings = useSettingsStore()
+
+const safeEngines = computed(() =>
+  Array.isArray(settings.engines) ? settings.engines : [],
+)
 
 const newEngine = ref({ name: '', icon: '', urlTemplate: '', isAi: false })
 const showAddEngine = ref(false)
@@ -157,7 +161,7 @@ function onImport(e: Event) {
         <section>
           <h3 class="text-white/80 text-sm font-bold mb-3 uppercase tracking-wider">搜索引擎</h3>
           <div class="space-y-1 mb-3">
-            <div v-for="engine in settings.engines" :key="engine.id">
+            <div v-for="engine in safeEngines" :key="engine.id">
               <!-- normal display -->
               <div
                 v-if="editingEngineId !== engine.id"

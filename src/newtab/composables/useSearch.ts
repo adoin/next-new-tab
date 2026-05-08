@@ -5,8 +5,8 @@ export function useSearch() {
   const settings = useSettingsStore()
 
   const currentEngine = computed(() => {
-    return settings.engines.find((e) => e.id === settings.settings.defaultEngineId)
-      || settings.engines[0]
+    const list = Array.isArray(settings.engines) ? settings.engines : []
+    return list.find((e) => e.id === settings.settings.defaultEngineId) || list[0]
   })
 
   function search(query: string) {
@@ -19,9 +19,19 @@ export function useSearch() {
     if (!engine.icon.startsWith('http')) {
       try {
         const hostname = new URL(url).hostname
+        // immediate: Google API as placeholder
         settings.updateEngine(engine.id, {
-          icon: `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`,
+          icon: `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${hostname}&size=128`,
         })
+        // async: try high-res icon from the site itself
+        chrome.runtime.sendMessage({
+          type: 'FETCH_FAVICON',
+          payload: { domain: hostname },
+        }).then((result: any) => {
+          if (result.ok) {
+            settings.updateEngine(engine.id, { icon: result.url })
+          }
+        }).catch(() => {})
       } catch {
         // ignore
       }
@@ -34,5 +44,9 @@ export function useSearch() {
     settings.updateSettings({ defaultEngineId: id })
   }
 
-  return { currentEngine, engines: settings.engines, search, switchEngine }
+  const safeEngines = computed(() =>
+    Array.isArray(settings.engines) ? settings.engines : [],
+  )
+
+  return { currentEngine, engines: safeEngines, search, switchEngine }
 }

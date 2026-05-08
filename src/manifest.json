@@ -5,21 +5,7 @@
   "description": "Beautiful new tab with wallpapers, bookmarks and search",
   "permissions": ["storage", "bookmarks"],
   "host_permissions": [
-    "*://*.bing.com/*",
-    "*://picsum.photos/*",
-    "*://*.yumehinata.com/*",
-    "*://*.paugram.com/*",
-    "*://*.mtyqx.cn/*",
-    "*://*.imgapi.cn/*",
-    "*://*.vsuy.cn/*",
-    "*://*.6045833.xyz/*",
-    "*://*.qemao.com/*",
-    "*://*.71xk.com/*",
-    "*://*.kori.moe/*",
-    "*://*.yanjiu.xin/*",
-    "*://wallpaper.apc.360.cn/*",
-    "*://*.qhimg.com/*",
-    "*://*.360.cn/*"
+    "<all_urls>"
   ],
   "chrome_url_overrides": {
     "newtab": "src/newtab/index.html"
