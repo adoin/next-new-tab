@@ -4,8 +4,8 @@ import type { Settings, SearchEngine } from '../types'
 import { DEFAULT_SETTINGS, DEFAULT_ENGINES } from '../types'
 
 export const useSettingsStore = defineStore('settings', () => {
-  const settings = useStorage<Settings>('settings', { ...DEFAULT_SETTINGS })
-  const engines = useStorage<SearchEngine[]>('engines', [...DEFAULT_ENGINES])
+  const { data: settings, ready: settingsReady } = useStorage<Settings>('settings', { ...DEFAULT_SETTINGS })
+  const { data: engines } = useStorage<SearchEngine[]>('engines', [...DEFAULT_ENGINES])
 
   function updateSettings(partial: Partial<Settings>) {
     Object.assign(settings.value, partial)
@@ -16,6 +16,8 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function removeEngine(id: string) {
+    const engine = engines.value.find((e) => e.id === id)
+    if (engine?.builtin) return
     engines.value = engines.value.filter((e) => e.id !== id)
   }
 
@@ -29,5 +31,5 @@ export const useSettingsStore = defineStore('settings', () => {
     engines.value = [...DEFAULT_ENGINES]
   }
 
-  return { settings, engines, updateSettings, addEngine, removeEngine, updateEngine, resetSettings }
+  return { settings, engines, settingsReady, updateSettings, addEngine, removeEngine, updateEngine, resetSettings }
 })

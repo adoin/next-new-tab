@@ -3,13 +3,39 @@ import { ref } from 'vue'
 import type { Bookmark } from '../types'
 import { useStorage } from '../composables/useStorage'
 
+function normalizeUrl(url: string): string {
+  if (!url) return url
+  const trimmed = url.trim()
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (/^\/\//.test(trimmed)) return `https:${trimmed}`
+  return `https://${trimmed}`
+}
+
+function getFaviconUrl(url: string): string {
+  try {
+    const hostname = new URL(normalizeUrl(url)).hostname
+    return `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`
+  } catch {
+    return ''
+  }
+}
+
 export const useBookmarksStore = defineStore('bookmarks', () => {
-  const bookmarks = useStorage<Bookmark[]>('bookmarks', [])
+  const { data: bookmarks, ready } = useStorage<Bookmark[]>('bookmarks', [])
+
+  // ensure bookmarks is always an array (handle corrupted/legacy storage)
+  ready.then(() => {
+    if (!Array.isArray(bookmarks.value)) {
+      bookmarks.value = []
+    }
+  })
 
   function addBookmark(bookmark: Omit<Bookmark, 'id' | 'order'>) {
     const id = crypto.randomUUID()
     const order = bookmarks.value.length
-    bookmarks.value.push({ ...bookmark, id, order })
+    const url = normalizeUrl(bookmark.url)
+    const icon = bookmark.icon || getFaviconUrl(url)
+    bookmarks.value.push({ ...bookmark, id, order, url, icon })
   }
 
   function updateBookmark(id: string, partial: Partial<Bookmark>) {
@@ -29,12 +55,12 @@ export const useBookmarksStore = defineStore('bookmarks', () => {
   function importFromChrome(chromeBookmarks: Array<{ title: string; url: string }>) {
     for (const bm of chromeBookmarks) {
       if (!bm.url) continue
+      const url = normalizeUrl(bm.url)
       addBookmark({
-        title: bm.title || new URL(bm.url).hostname,
+        title: bm.title || new URL(url).hostname,
         description: '',
-        url: bm.url,
-        icon: `https://www.google.com/s2/favicons?domain=${new URL(bm.url).hostname}&sz=64`,
-        bgImage: '',
+        url,
+        icon: getFaviconUrl(url),
         colSpan: 1,
         rowSpan: 1,
       })

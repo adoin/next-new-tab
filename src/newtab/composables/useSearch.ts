@@ -14,7 +14,20 @@ export function useSearch() {
     const engine = currentEngine.value
     const encoded = encodeURIComponent(query.trim())
     const url = engine.urlTemplate.replace('%s', encoded)
-    window.location.href = url
+
+    // update engine icon to favicon on first search (skip if already a URL)
+    if (!engine.icon.startsWith('http')) {
+      try {
+        const hostname = new URL(url).hostname
+        settings.updateEngine(engine.id, {
+          icon: `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`,
+        })
+      } catch {
+        // ignore
+      }
+    }
+
+    window.open(url, '_blank')
   }
 
   function switchEngine(id: string) {

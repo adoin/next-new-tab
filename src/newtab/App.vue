@@ -1,23 +1,29 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useSettingsStore } from './stores'
-import { useHistory } from './composables/useHistory'
+import { useWallpaper } from './composables/useWallpaper'
+import { useTheme } from './composables/useTheme'
 import WallpaperBg from './components/WallpaperBg.vue'
 import SearchBar from './components/SearchBar.vue'
 import BookmarkGrid from './components/BookmarkGrid.vue'
 import BookmarkEditor from './components/BookmarkEditor.vue'
 import BookmarkImporter from './components/BookmarkImporter.vue'
-import HistoryPanel from './components/HistoryPanel.vue'
 import SettingsDrawer from './components/SettingsDrawer.vue'
+import WallpaperPicker from './components/WallpaperPicker.vue'
 
 const settings = useSettingsStore()
-const { events, loading: historyLoading, fetchEvents } = useHistory()
+const wallpaper = useWallpaper()
+const { extractFromImage } = useTheme()
+
+watch(() => wallpaper.current.value?.url, (url) => {
+  if (url) extractFromImage(url)
+})
 
 const showSettings = ref(false)
 const showEditor = ref(false)
 const showImporter = ref(false)
+const showPicker = ref(false)
 const editId = ref<string | null>(null)
-const wallpaperBg = ref<InstanceType<typeof WallpaperBg> | null>(null)
 
 function onEditBookmark(id: string) {
   editId.value = id
@@ -34,83 +40,90 @@ function onCloseEditor() {
   editId.value = null
 }
 
-watch(() => settings.settings.wallpaperMode, (mode) => {
-  if (mode === 'history') {
-    fetchEvents(settings.settings.historyDomain)
-  }
-})
-
-watch(() => settings.settings.historyDomain, (domain) => {
-  if (settings.settings.wallpaperMode === 'history') {
-    fetchEvents(domain)
-  }
-})
+function onSelectWallpaper(item: any) {
+  wallpaper.setManualWallpaper(item)
+}
 
 onMounted(() => {
-  if (settings.settings.wallpaperMode === 'history') {
-    fetchEvents(settings.settings.historyDomain)
-  }
+  wallpaper.initWallpaper()
+})
+
+onUnmounted(() => {
+  wallpaper.cleanup()
 })
 </script>
 
 <template>
-  <WallpaperBg ref="wallpaperBg" :mode="settings.settings.wallpaperMode">
-    <div class="relative z-10 w-full h-full flex flex-col items-center justify-start pt-[10vh] px-4">
-      <!-- mode tabs -->
-      <div class="glass flex gap-1 p-1 mb-8">
-        <button
-          class="px-4 py-1.5 rounded-lg text-sm transition-colors"
-          :class="settings.settings.wallpaperMode === 'api' ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white'"
-          @click="settings.updateSettings({ wallpaperMode: 'api' })"
-        >
-          壁纸
-        </button>
-        <button
-          class="px-4 py-1.5 rounded-lg text-sm transition-colors"
-          :class="settings.settings.wallpaperMode === 'history' ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white'"
-          @click="settings.updateSettings({ wallpaperMode: 'history' })"
-        >
-          历史上的今天
-        </button>
-      </div>
-
-      <!-- search bar -->
-      <SearchBar />
-
-      <!-- spacer -->
-      <div :style="{ height: `${settings.settings.searchGap}px` }" />
-
-      <!-- bookmarks -->
-      <BookmarkGrid @edit="onEditBookmark" @add="onAddBookmark" />
-
-      <!-- history panel -->
-      <HistoryPanel
-        v-if="settings.settings.wallpaperMode === 'history'"
-        :events="events"
-        :loading="historyLoading"
-        class="mt-6"
-      />
-    </div>
-
-    <!-- settings button -->
-    <button
-      class="fixed bottom-6 right-6 z-20 glass w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full"
-      @click="showSettings = true"
+  <WallpaperBg :url="wallpaper.current.value?.url" :loading="wallpaper.loading.value">
+    <div
+      class="relative z-10 w-full h-full overflow-y-auto flex flex-col items-center pb-20 px-4"
+      :style="{ paddingTop: `${settings.settings.searchTopMargin}px` }"
     >
-      ⚙
+      <SearchBar />
+      <div :style="{ height: `${settings.settings.searchGap}px` }" />
+      <BookmarkGrid @edit="onEditBookmark" @add="onAddBookmark" />
+    </div>
+  </WallpaperBg>
+
+  <!-- bottom-right buttons -->
+  <div class="fixed bottom-6 right-6 z-20 flex items-center gap-3">
+    <!-- random refresh: random mode OR manual mode but no wallpaper chosen -->
+    <button
+      v-if="settings.settings.wallpaperMode === 'random' || !wallpaper.manualWallpaperChosen.value"
+      class="glass w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full"
+      @click="wallpaper.fetchRandom()"
+      title="换一张"
+    >
+      &#x21bb;
     </button>
 
-    <!-- importer button -->
+    <!-- pick wallpaper: manual mode -->
     <button
-      class="fixed bottom-6 right-20 z-20 glass w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full"
+      v-if="settings.settings.wallpaperMode === 'manual'"
+      class="glass w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full"
+      @click="showPicker = true"
+      title="选择壁纸"
+    >
+      &#x1f5bc;
+    </button>
+
+    <!-- importer -->
+    <button
+      class="glass w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full"
       @click="showImporter = true"
       title="从浏览器导入书签"
     >
-      📥
+      &#x1f4e5;
     </button>
-  </WallpaperBg>
+
+    <!-- settings -->
+    <button
+      class="glass w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full"
+      @click="showSettings = true"
+    >
+      &#x2699;
+    </button>
+  </div>
 
   <BookmarkEditor :visible="showEditor" :edit-id="editId" @close="onCloseEditor" />
   <BookmarkImporter :visible="showImporter" @close="showImporter = false" />
-  <SettingsDrawer :visible="showSettings" @close="showSettings = false" />
+  <SettingsDrawer
+    :visible="showSettings"
+    @close="showSettings = false"
+    @open-picker="showPicker = true"
+  />
+  <WallpaperPicker
+    :visible="showPicker"
+    :categories="wallpaper.categories.value"
+    :wallpapers="wallpaper.wallpapers.value"
+    :loading="wallpaper.manualLoading.value"
+    :active-category-id="wallpaper.activeCategoryId.value"
+    :page="wallpaper.page.value"
+    :total="wallpaper.total.value"
+    :page-size="wallpaper.pageSize"
+    @close="showPicker = false"
+    @select-category="wallpaper.selectCategory"
+    @select-wallpaper="onSelectWallpaper"
+    @go-page="wallpaper.goPage"
+  />
 </template>

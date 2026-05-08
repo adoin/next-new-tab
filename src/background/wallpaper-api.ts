@@ -2,10 +2,15 @@ interface Wallpaper {
   url: string
   author: string
   source: string
-  description?: string
 }
 
-// Bing 每日一图
+interface RandomWallpaperSource {
+  id: string
+  name: string
+  url: string
+}
+
+// Bing daily wallpaper
 async function getBingDaily(): Promise<Wallpaper> {
   const res = await fetch('https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1')
   const data = await res.json()
@@ -13,66 +18,66 @@ async function getBingDaily(): Promise<Wallpaper> {
   return {
     url: `https://www.bing.com${img.url}`,
     author: img.copyright.split('(')[0].trim(),
-    source: 'bing',
-    description: img.copyright,
+    source: 'Bing',
   }
 }
 
-// Unsplash
-async function getUnsplash(keyword?: string, key?: string): Promise<Wallpaper[]> {
-  if (!key) throw new Error('Unsplash API key required')
-  const endpoint = keyword
-    ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keyword)}&per_page=10&client_id=${key}`
-    : `https://api.unsplash.com/photos/random?count=10&client_id=${key}`
-  const res = await fetch(endpoint)
-  const data = await res.json()
-  const photos = keyword ? data.results : data
-  return photos.map((p: any) => ({
-    url: p.urls.regular,
-    author: p.user.name,
-    source: 'unsplash',
-    description: p.description || p.alt_description,
-  }))
+// Random wallpaper (redirect — works as image URL)
+function getRandomWallpaper(source: RandomWallpaperSource): Wallpaper {
+  const sep = source.url.includes('?') ? '&' : '?'
+  const url = `${source.url}${sep}_t=${Date.now()}`
+  return { url, author: '', source: source.name }
 }
 
-// Pexels
-async function getPexels(keyword?: string, key?: string): Promise<Wallpaper[]> {
-  if (!key) throw new Error('Pexels API key required')
-  const endpoint = keyword
-    ? `https://api.pexels.com/v1/search?query=${encodeURIComponent(keyword)}&per_page=10`
-    : `https://api.pexels.com/v1/curated?per_page=10`
-  const res = await fetch(endpoint, { headers: { Authorization: key } })
-  const data = await res.json()
-  return data.photos.map((p: any) => ({
-    url: p.src.large2x || p.src.large,
-    author: p.photographer,
-    source: 'pexels',
-    description: p.alt,
-  }))
+// 360 wallpaper — categories
+async function get360Categories() {
+  const url = 'http://wallpaper.apc.360.cn/index.php?c=WallPaperAndroid&a=getAllCategories'
+  console.log('[wallpaper-api] Fetching 360 categories from:', url)
+  const res = await fetch(url)
+  const json = await res.json()
+  console.log('[wallpaper-api] 360 categories response:', json)
+  return json.data || []
 }
 
-// message handler
+// 360 wallpaper — list by category
+async function get360ByCategory(cid: string, start: number, count: number) {
+  const url = `http://wallpaper.apc.360.cn/index.php?c=WallPaperAndroid&a=getAppsByCategory&cid=${cid}&start=${start}&count=${count}`
+  const res = await fetch(url)
+  const json = await res.json()
+  return { items: json.data || [], total: Number(json.total) || 0 }
+}
+
+// Message handler
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === 'WALLPAPER_GET') {
-    const { source, keyword, unsplashKey, pexelsKey } = msg.payload
+  console.log('[wallpaper-api] Received message:', msg.type)
+  if (msg.type === 'RANDOM_WALLPAPER_GET') {
+    const { source } = msg.payload as { source: RandomWallpaperSource }
     const handler = async () => {
       try {
-        if (source === 'bing') {
+        if (source.id === 'bing') {
           return { ok: true, data: await getBingDaily() }
         }
-        if (source === 'unsplash') {
-          return { ok: true, data: await getUnsplash(keyword, unsplashKey) }
-        }
-        if (source === 'pexels') {
-          return { ok: true, data: await getPexels(keyword, pexelsKey) }
-        }
-        // fallback bing
-        return { ok: true, data: await getBingDaily() }
+        return { ok: true, data: getRandomWallpaper(source) }
       } catch (e: any) {
         return { ok: false, error: e.message }
       }
     }
     handler().then(sendResponse)
-    return true // async response
+    return true
+  }
+
+  if (msg.type === 'WALLPAPER_360_CATEGORIES') {
+    get360Categories()
+      .then((data) => sendResponse({ ok: true, data }))
+      .catch((e) => sendResponse({ ok: false, error: e.message }))
+    return true
+  }
+
+  if (msg.type === 'WALLPAPER_360_LIST') {
+    const { cid, start, count } = msg.payload
+    get360ByCategory(cid, start, count)
+      .then((data) => sendResponse({ ok: true, ...data }))
+      .catch((e) => sendResponse({ ok: false, error: e.message }))
+    return true
   }
 })

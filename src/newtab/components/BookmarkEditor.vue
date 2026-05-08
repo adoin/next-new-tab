@@ -19,7 +19,6 @@ const form = ref({
   description: '',
   url: '',
   icon: '',
-  bgImage: '',
   colSpan: 1,
   rowSpan: 1,
 })
@@ -28,10 +27,10 @@ watch(() => props.visible, (v) => {
   if (v && props.editId) {
     const bm = bookmarks.bookmarks.find((b) => b.id === props.editId)
     if (bm) {
-      form.value = { ...bm }
+      form.value = { title: bm.title, description: bm.description, url: bm.url, icon: bm.icon, colSpan: bm.colSpan, rowSpan: bm.rowSpan }
     }
   } else if (v) {
-    form.value = { title: '', description: '', url: '', icon: '', bgImage: '', colSpan: 1, rowSpan: 1 }
+    form.value = { title: '', description: '', url: '', icon: '', colSpan: 1, rowSpan: 1 }
   }
 })
 
@@ -68,10 +67,6 @@ function onSave() {
           <div>
             <label class="text-white/70 text-sm block mb-1">图标 URL</label>
             <input v-model="form.icon" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white outline-none" placeholder="留空自动获取 favicon" />
-          </div>
-          <div>
-            <label class="text-white/70 text-sm block mb-1">背景图 URL</label>
-            <input v-model="form.bgImage" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white outline-none" placeholder="可选" />
           </div>
           <div class="flex gap-4">
             <div>

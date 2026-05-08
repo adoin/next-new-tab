@@ -13,7 +13,11 @@ const emit = defineEmits<{
 }>()
 
 function open() {
-  window.location.href = props.bookmark.url
+  let url = props.bookmark.url.trim()
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`
+  }
+  window.open(url, '_blank')
 }
 </script>
 
@@ -27,26 +31,16 @@ function open() {
     }"
     @click="open"
   >
-    <div
-      v-if="bookmark.bgImage"
-      class="absolute inset-0 bg-cover bg-center opacity-30"
-      :style="{ backgroundImage: `url(${bookmark.bgImage})` }"
-    />
-
-    <div class="relative p-3 flex flex-col items-center justify-center h-full gap-1">
+    <div class="relative flex flex-col items-center justify-center h-full w-full">
       <img
         v-if="bookmark.icon"
         :src="bookmark.icon"
         :alt="bookmark.title"
-        class="w-10 h-10 rounded-lg object-contain"
+        class="w-full h-full object-cover"
         @error="($event.target as HTMLImageElement).style.display = 'none'"
       />
-      <div class="text-white font-medium text-sm text-center line-clamp-1">{{ bookmark.title }}</div>
-      <div
-        v-if="bookmark.description"
-        class="text-white/50 text-xs text-center line-clamp-2"
-      >
-        {{ bookmark.description }}
+      <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5">
+        <div class="text-white font-medium text-xs text-center line-clamp-1">{{ bookmark.title }}</div>
       </div>
     </div>
 
