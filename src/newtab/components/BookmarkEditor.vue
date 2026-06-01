@@ -22,6 +22,7 @@ const form = ref({
   iconBgColor: 'transparent',
   colSpan: 1,
   rowSpan: 1,
+  contentJump: false,
 })
 
 const hexColor = ref('#000000')
@@ -66,19 +67,27 @@ function updateFormColor() {
 
 watch([hexColor, alpha, useBgColor], updateFormColor)
 
+watch(() => form.value.contentJump, (enabled) => {
+  if (enabled && form.value.colSpan < 2) {
+    form.value.colSpan = 2
+  }
+})
+
 watch(() => props.visible, (v) => {
   if (v && props.editId) {
     const list = Array.isArray(bookmarks.bookmarks) ? bookmarks.bookmarks : []
     const bm = list.find((b) => b.id === props.editId)
     if (bm) {
+      const contentJump = bm.contentJump ?? false
       form.value = {
         title: bm.title,
         description: bm.description,
         url: bm.url,
         icon: bm.icon,
         iconBgColor: bm.iconBgColor || 'transparent',
-        colSpan: bm.colSpan,
+        colSpan: contentJump ? Math.max(2, bm.colSpan) : bm.colSpan,
         rowSpan: bm.rowSpan,
+        contentJump,
       }
       const parsed = parseRgba(bm.iconBgColor)
       useBgColor.value = parsed.a > 0
@@ -86,7 +95,7 @@ watch(() => props.visible, (v) => {
       alpha.value = parsed.a
     }
   } else if (v) {
-    form.value = { title: '', description: '', url: '', icon: '', iconBgColor: 'transparent', colSpan: 1, rowSpan: 1 }
+    form.value = { title: '', description: '', url: '', icon: '', iconBgColor: 'transparent', colSpan: 1, rowSpan: 1, contentJump: false }
     hexColor.value = '#000000'
     alpha.value = 0
     useBgColor.value = false
@@ -95,6 +104,13 @@ watch(() => props.visible, (v) => {
 
 function onSave() {
   if (!form.value.url) return
+  if (form.value.contentJump && !form.value.url.includes('%s')) {
+    alert('开启「携带内容跳转」时，URL 必须包含 %s 占位符')
+    return
+  }
+  if (form.value.contentJump && form.value.colSpan < 2) {
+    form.value.colSpan = 2
+  }
   if (props.editId) {
     bookmarks.updateBookmark(props.editId, { ...form.value })
   } else {
@@ -119,6 +135,13 @@ function onSave() {
           <div>
             <label class="text-white/70 text-sm block mb-1">URL *</label>
             <input v-model="form.url" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white outline-none" placeholder="https://google.com" />
+          </div>
+          <div>
+            <label class="flex items-center gap-2 text-white/70 text-sm cursor-pointer">
+              <input v-model="form.contentJump" type="checkbox" class="accent-blue-400" />
+              <span>携带内容跳转</span>
+            </label>
+            <p v-if="form.contentJump" class="text-white/40 text-xs mt-1">URL 须包含 %s；占列数至少为 2；输入后回车跳转并清空输入框</p>
           </div>
           <div>
             <label class="text-white/70 text-sm block mb-1">描述</label>
@@ -154,7 +177,7 @@ function onSave() {
           <div class="flex gap-4">
             <div>
               <label class="text-white/70 text-sm block mb-1">占列数</label>
-              <input v-model.number="form.colSpan" type="number" min="1" max="4" class="w-20 bg-white/10 rounded-lg px-3 py-2 text-white outline-none" />
+              <input v-model.number="form.colSpan" type="number" :min="form.contentJump ? 2 : 1" max="4" class="w-20 bg-white/10 rounded-lg px-3 py-2 text-white outline-none" />
             </div>
             <div>
               <label class="text-white/70 text-sm block mb-1">占行数</label>

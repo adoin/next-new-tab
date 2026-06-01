@@ -48,15 +48,8 @@ export interface Bookmark {
   colSpan: number
   rowSpan: number
   order: number
-}
-
-export interface SearchEngine {
-  id: string
-  name: string
-  icon: string
-  urlTemplate: string
-  isAi: boolean
-  builtin?: boolean
+  /** 开启后需在 URL 中包含 %s，回车时以输入内容替换 %s 后跳转 */
+  contentJump?: boolean
 }
 
 export interface Settings {
@@ -72,10 +65,12 @@ export interface Settings {
   searchTopMargin: number
   gridColumns: number
   cardRadius: number
-  defaultEngineId: string
   bookmarkCardSize: number
   cardPadding: number
+  bookmarkIconSize: number
   bookmarkOpenMode: 'newTab' | 'currentTab'
+  /** 书签标题使用流动彩虹渐变字 */
+  rainbowTitles: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -91,10 +86,11 @@ export const DEFAULT_SETTINGS: Settings = {
   searchTopMargin: 160,
   gridColumns: 12,
   cardRadius: 12,
-  defaultEngineId: 'google',
   bookmarkCardSize: 100,
   cardPadding: 4,
+  bookmarkIconSize: 90,
   bookmarkOpenMode: 'newTab',
+  rainbowTitles: false,
 }
 
 export const RANDOM_WALLPAPER_SOURCES: RandomWallpaperSource[] = [
@@ -110,14 +106,4 @@ export const RANDOM_WALLPAPER_SOURCES: RandomWallpaperSource[] = [
   { id: '71xk', name: '71xk', url: 'https://api.71xk.com/api/picture/v1' },
   { id: 'kori', name: 'Kori', url: 'https://api.kori.moe/img' },
   { id: 'yanjiu', name: 'Yanjiu', url: 'https://img.api.yanjiu.xin/index.php?type=h' },
-]
-
-export const DEFAULT_ENGINES: SearchEngine[] = [
-  { id: 'google', name: 'Google', icon: '🔍', urlTemplate: 'https://www.google.com/search?q=%s', isAi: false, builtin: true },
-  { id: 'bing', name: 'Bing', icon: '🔎', urlTemplate: 'https://www.bing.com/search?q=%s', isAi: false, builtin: true },
-  { id: 'baidu', name: '百度', icon: '🅱️', urlTemplate: 'https://www.baidu.com/s?wd=%s', isAi: false, builtin: true },
-  { id: 'duckduckgo', name: 'DuckDuckGo', icon: '🦆', urlTemplate: 'https://duckduckgo.com/?q=%s', isAi: false, builtin: true },
-  { id: 'doubao', name: '豆包', icon: '🫘', urlTemplate: 'https://www.doubao.com/chat/url-action?action={"pluginId":"Send_Message","payload":{"text":"%s"}}', isAi: true },
-  { id: 'gemini', name: 'Gemini', icon: '✦', urlTemplate: 'https://www.google.com/search?udm=50&q=%s', isAi: true },
-  { id: 'chatgpt', name: 'ChatGPT', icon: '💬', urlTemplate: 'https://chatgpt.com/?q=%s&hints=search&temporary-chat=true', isAi: true },
 ]

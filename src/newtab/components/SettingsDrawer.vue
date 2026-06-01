@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useSettingsStore } from '../stores'
-import type { SearchEngine } from '../types'
 import { RANDOM_WALLPAPER_SOURCES } from '../types'
 
 defineProps<{ visible: boolean }>()
@@ -14,15 +13,6 @@ const emit = defineEmits<{
 
 const settings = useSettingsStore()
 
-const safeEngines = computed(() =>
-  Array.isArray(settings.engines) ? settings.engines : [],
-)
-
-const newEngine = ref({ name: '', icon: '', urlTemplate: '', isAi: false })
-const showAddEngine = ref(false)
-const editingEngineId = ref<string | null>(null)
-const editForm = ref({ name: '', icon: '', urlTemplate: '', isAi: false })
-
 const collapsed = ref<Record<string, boolean>>({})
 
 function toggleSection(key: string) {
@@ -33,35 +23,9 @@ function isCollapsed(key: string) {
   return collapsed.value[key] ?? false
 }
 
-function onAddEngine() {
-  if (!newEngine.value.name || !newEngine.value.urlTemplate) return
-  settings.addEngine({
-    id: crypto.randomUUID(),
-    ...newEngine.value,
-  })
-  newEngine.value = { name: '', icon: '', urlTemplate: '', isAi: false }
-  showAddEngine.value = false
-}
-
-function onStartEdit(engine: SearchEngine) {
-  editingEngineId.value = engine.id
-  editForm.value = { name: engine.name, icon: engine.icon, urlTemplate: engine.urlTemplate, isAi: engine.isAi }
-}
-
-function onSaveEdit() {
-  if (!editingEngineId.value) return
-  settings.updateEngine(editingEngineId.value, { ...editForm.value })
-  editingEngineId.value = null
-}
-
-function onCancelEdit() {
-  editingEngineId.value = null
-}
-
 function onExport() {
   const data = {
     settings: settings.settings,
-    engines: settings.engines,
   }
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
@@ -80,7 +44,6 @@ function onImport(e: Event) {
     try {
       const data = JSON.parse(reader.result as string)
       if (data.settings) Object.assign(settings.settings, data.settings)
-      if (data.engines) settings.engines = data.engines
     } catch {
       alert('配置文件格式错误')
     }
@@ -171,7 +134,11 @@ function onImport(e: Event) {
             </div>
             <div>
               <label class="text-white/60 text-xs block mb-1">列数 {{ settings.settings.gridColumns }}</label>
-              <input v-model.number="settings.settings.gridColumns" type="range" min="12" max="36" class="w-full accent-blue-400" />
+              <input v-model.number="settings.settings.gridColumns" type="range" min="8" max="36" class="w-full accent-blue-400" />
+            </div>
+            <div>
+              <label class="text-white/60 text-xs block mb-1">书签图标尺寸 {{ settings.settings.bookmarkIconSize }}%</label>
+              <input v-model.number="settings.settings.bookmarkIconSize" type="range" min="80" max="100" class="w-full accent-blue-400" />
             </div>
             <div>
               <label class="text-white/60 text-xs block mb-1">卡片圆角 {{ settings.settings.cardRadius }}px</label>
@@ -205,74 +172,11 @@ function onImport(e: Event) {
                 <option value="currentTab">当前标签页</option>
               </select>
             </div>
-          </div>
-        </section>
-
-        <!-- Search Section -->
-        <section>
-          <h3
-            class="text-white/80 text-sm font-bold uppercase tracking-wider cursor-pointer flex items-center justify-between"
-            @click="toggleSection('search')"
-          >
-            <span>搜索引擎</span>
-            <span class="text-white/40 transition-transform" :class="{ 'rotate-180': !isCollapsed('search') }">&#x25BC;</span>
-          </h3>
-          <div v-show="!isCollapsed('search')" class="mt-3">
-            <div class="space-y-1 mb-3">
-              <div v-for="engine in safeEngines" :key="engine.id">
-                <!-- normal display -->
-                <div
-                  v-if="editingEngineId !== engine.id"
-                  class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-                >
-                  <span class="w-5 text-center text-sm">{{ engine.icon }}</span>
-                  <span class="text-white text-sm flex-1">{{ engine.name }}</span>
-                  <span v-if="engine.builtin" class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/40">内置</span>
-                  <span v-else-if="engine.isAi" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-200">AI</span>
-                  <button
-                    v-if="!engine.builtin"
-                    class="text-white/30 hover:text-blue-400 text-sm transition-colors"
-                    @click="onStartEdit(engine)"
-                    title="编辑"
-                  >&#x270E;</button>
-                  <button
-                    v-if="!engine.builtin"
-                    class="text-white/30 hover:text-red-400 text-sm transition-colors"
-                    @click="settings.removeEngine(engine.id)"
-                    title="删除"
-                  >&#x2715;</button>
-                </div>
-                <!-- inline edit form -->
-                <div v-else class="px-3 py-2 rounded-lg bg-white/5 space-y-2">
-                  <div class="flex gap-2">
-                    <input v-model="editForm.name" class="flex-1 bg-white/10 rounded px-2 py-1 text-white text-sm outline-none" placeholder="名称" />
-                    <input v-model="editForm.icon" class="w-16 bg-white/10 rounded px-2 py-1 text-white text-sm outline-none" placeholder="图标" />
-                  </div>
-                  <input v-model="editForm.urlTemplate" class="w-full bg-white/10 rounded px-2 py-1 text-white text-sm outline-none" placeholder="URL 模板 (含 %s)" />
-                  <div class="flex items-center justify-between">
-                    <label class="flex items-center gap-1.5 text-white/60 text-xs">
-                      <input type="checkbox" v-model="editForm.isAi" class="accent-purple-400" /> AI
-                    </label>
-                    <div class="flex gap-2">
-                      <button class="text-xs text-white/50 hover:text-white" @click="onCancelEdit">取消</button>
-                      <button class="text-xs text-blue-400 hover:text-blue-300" @click="onSaveEdit">保存</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <button class="text-blue-300 text-sm hover:text-blue-200" @click="showAddEngine = !showAddEngine">
-              {{ showAddEngine ? '取消' : '+ 添加引擎' }}
-            </button>
-            <div v-if="showAddEngine" class="mt-2 space-y-2">
-              <input v-model="newEngine.name" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="名称" />
-              <input v-model="newEngine.icon" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="图标 (emoji 或 URL)" />
-              <input v-model="newEngine.urlTemplate" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="URL 模板 (含 %s)" />
-              <label class="flex items-center gap-2 text-white/60 text-sm">
-                <input type="checkbox" v-model="newEngine.isAi" class="accent-purple-400" /> AI 搜索
-              </label>
-              <button class="w-full px-3 py-2 rounded-lg bg-blue-500/80 text-white text-sm hover:bg-blue-500" @click="onAddEngine">添加</button>
-            </div>
+            <label class="flex items-center gap-2 text-white/70 text-sm cursor-pointer">
+              <input v-model="settings.settings.rainbowTitles" type="checkbox" class="accent-blue-400" />
+              <span>彩虹标题</span>
+            </label>
+            <p class="text-white/40 text-xs -mt-1">开启后书签标题为流动渐变彩色；关闭时使用白字描边，在壁纸上更易辨认</p>
           </div>
         </section>
 

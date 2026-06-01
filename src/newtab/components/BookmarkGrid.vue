@@ -17,6 +17,14 @@ const safeBookmarks = computed(() =>
 
 const cardSize = computed(() => settings.settings.bookmarkCardSize || 100)
 
+const GRID_GAP_X = 12
+const GRID_GAP_Y = 16
+
+function effectiveColSpan(bm: { colSpan?: number; contentJump?: boolean }) {
+  const span = bm.colSpan || 1
+  return bm.contentJump ? Math.max(2, span) : span
+}
+
 function onDelete(id: string) {
   bookmarks.removeBookmark(id)
 }
@@ -34,7 +42,7 @@ function onDelete(id: string) {
       class="grid justify-items-center"
       :style="{
         gridTemplateColumns: `repeat(${settings.settings.gridColumns}, auto)`,
-        gap: '16px 12px',
+        gap: `${GRID_GAP_Y}px ${GRID_GAP_X}px`,
       }"
     >
       <BookmarkCard
@@ -45,24 +53,22 @@ function onDelete(id: string) {
         :radius="settings.settings.cardRadius"
         :card-size="cardSize"
         :card-padding="settings.settings.cardPadding"
+        :style="{
+          gridColumn: `span ${effectiveColSpan(bm)}`,
+          gridRow: `span ${bm.rowSpan || 1}`,
+        }"
         @edit="emit('edit', $event)"
         @delete="onDelete"
       />
 
-      <div class="flex flex-col items-center gap-1.5">
-        <button
-          class="glass flex items-center justify-center cursor-pointer hover:scale-105 transition-transform overflow-hidden"
-          :style="{
-            width: `${cardSize}px`,
-            height: `${cardSize}px`,
-            padding: `${settings.settings.cardPadding}px`,
-            borderRadius: `${settings.settings.cardRadius}px`,
-          }"
-          @click="emit('add')"
-        >
-          <span class="text-white/50 text-3xl">+</span>
-        </button>
-      </div>
+      <BookmarkCard
+        is-add
+        :scale="settings.settings.bookmarkScale"
+        :radius="settings.settings.cardRadius"
+        :card-size="cardSize"
+        :card-padding="settings.settings.cardPadding"
+        @add="emit('add')"
+      />
     </div>
   </div>
 </template>
