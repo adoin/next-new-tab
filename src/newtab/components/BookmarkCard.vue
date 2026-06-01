@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useSettingsStore } from '../stores'
+import {
+  getContentJumpHistory,
+  pushContentJumpHistory,
+} from '../composables/useContentJumpHistory'
+import BookmarkJumpHistoryItem from './BookmarkJumpHistoryItem.vue'
 import type { Bookmark } from '../types'
 
 const GRID_GAP_X = 12
@@ -23,10 +28,12 @@ const emit = defineEmits<{
 
 const settings = useSettingsStore()
 const jumpInput = ref('')
+const jumpHistory = ref<string[]>([])
 
 const iconSizePercent = computed(() => settings.settings.bookmarkIconSize ?? 90)
 const rainbowTitles = computed(() => settings.settings.rainbowTitles === true)
 const contentJumpEnabled = computed(() => !props.isAdd && props.bookmark?.contentJump === true)
+const imageRadius = computed(() => `${props.radius}px`)
 
 const colSpan = computed(() => {
   if (props.isAdd) return 1
@@ -41,6 +48,17 @@ const displayWidth = computed(() =>
 const displayHeight = computed(() =>
   rowSpan.value * props.cardSize + (rowSpan.value - 1) * GRID_GAP_Y,
 )
+
+function refreshJumpHistory() {
+  if (props.bookmark?.id) {
+    jumpHistory.value = getContentJumpHistory(props.bookmark.id)
+  } else {
+    jumpHistory.value = []
+  }
+}
+
+onMounted(refreshJumpHistory)
+watch(() => props.bookmark?.id, refreshJumpHistory)
 
 function normalizeUrl(url: string) {
   let normalized = url.trim()
@@ -58,6 +76,10 @@ function navigateTo(url: string) {
   }
 }
 
+function buildJumpUrl(content: string) {
+  return normalizeUrl(props.bookmark!.url).replace(/%s/g, encodeURIComponent(content.trim()))
+}
+
 function open() {
   if (props.isAdd) {
     emit('add')
@@ -67,11 +89,17 @@ function open() {
   navigateTo(normalizeUrl(props.bookmark!.url))
 }
 
+function jumpWithContent(content: string) {
+  const trimmed = content.trim()
+  if (!trimmed || !props.bookmark) return
+  navigateTo(buildJumpUrl(trimmed))
+  jumpHistory.value = pushContentJumpHistory(props.bookmark.id, trimmed)
+}
+
 function openWithContent() {
   const content = jumpInput.value.trim()
   if (!content) return
-  const url = normalizeUrl(props.bookmark!.url).replace(/%s/g, encodeURIComponent(content))
-  navigateTo(url)
+  jumpWithContent(content)
   jumpInput.value = ''
 }
 
@@ -103,9 +131,39 @@ function onJumpKeydown(e: KeyboardEvent) {
       }"
       @click="open"
     >
+      <!-- 携带内容跳转：左 logo + 右历史参数 -->
       <div
-        class="flex flex-1 min-h-0 w-full items-center justify-center"
-        :class="contentJumpEnabled ? '' : 'h-full'"
+        v-if="contentJumpEnabled"
+        class="flex flex-1 min-h-0 w-full gap-2"
+      >
+        <div class="bookmark-jump-logo shrink-0 flex items-center justify-center">
+          <img
+            v-if="bookmark!.icon"
+            :src="bookmark!.icon"
+            :alt="bookmark!.title"
+            class="bookmark-jump-logo__img object-contain w-full h-full"
+            :style="{ borderRadius: imageRadius }"
+            crossorigin="anonymous"
+            @error="($event.target as HTMLImageElement).style.display = 'none'"
+          />
+        </div>
+        <ul
+          class="bookmark-jump-history flex-1 min-w-0 min-h-0 overflow-y-auto list-none m-0 p-0 flex flex-col gap-0.5"
+          @click.stop
+        >
+          <li v-if="jumpHistory.length === 0" class="bookmark-title-readable text-[10px] py-0.5">
+            暂无记录
+          </li>
+          <li v-for="item in jumpHistory" :key="item">
+            <BookmarkJumpHistoryItem :text="item" @select="jumpWithContent(item)" />
+          </li>
+        </ul>
+      </div>
+
+      <!-- 普通书签 / 添加 -->
+      <div
+        v-else
+        class="flex flex-1 min-h-0 w-full items-center justify-center h-full"
       >
         <svg
           v-if="isAdd"
@@ -113,6 +171,7 @@ function onJumpKeydown(e: KeyboardEvent) {
           :style="{
             width: `${iconSizePercent}%`,
             height: `${iconSizePercent}%`,
+            borderRadius: imageRadius,
           }"
           viewBox="0 0 24 24"
           fill="none"
@@ -130,16 +189,18 @@ function onJumpKeydown(e: KeyboardEvent) {
           :style="{
             width: `${iconSizePercent}%`,
             height: `${iconSizePercent}%`,
+            borderRadius: imageRadius,
           }"
           crossorigin="anonymous"
           @error="($event.target as HTMLImageElement).style.display = 'none'"
         />
       </div>
+
       <input
         v-if="contentJumpEnabled"
         v-model="jumpInput"
         type="text"
-        class="w-full shrink-0 px-2 py-1.5 text-sm leading-snug rounded-md bg-white/15 text-white placeholder:text-white/50 outline-none border border-white/20 focus:border-blue-400/70"
+        class="bookmark-title-readable w-full shrink-0 px-2 py-1.5 text-sm leading-snug rounded-md bg-white/15 outline-none border border-white/20 focus:border-blue-400/70"
         placeholder="输入后回车跳转"
         @click.stop
         @keydown="onJumpKeydown"
@@ -173,3 +234,25 @@ function onJumpKeydown(e: KeyboardEvent) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.bookmark-jump-logo {
+  width: 38%;
+  max-width: 72px;
+  min-width: 40px;
+}
+
+.bookmark-jump-history {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+.bookmark-jump-history::-webkit-scrollbar {
+  width: 4px;
+}
+
+.bookmark-jump-history::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.35);
+}
+</style>
