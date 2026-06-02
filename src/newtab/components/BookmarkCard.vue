@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useSettingsStore } from '../stores'
 import {
   getContentJumpHistory,
   pushContentJumpHistory,
 } from '../composables/useContentJumpHistory'
-import BookmarkJumpHistoryItem from './BookmarkJumpHistoryItem.vue'
+import { useSettingsStore } from '../stores'
 import type { Bookmark } from '../types'
+import { buildContentJumpUrl } from '../utils/contentJumpUrl'
+import BookmarkJumpHistoryItem from './BookmarkJumpHistoryItem.vue'
 
 const GRID_GAP_X = 12
 const GRID_GAP_Y = 16
@@ -77,7 +78,7 @@ function navigateTo(url: string) {
 }
 
 function buildJumpUrl(content: string) {
-  return normalizeUrl(props.bookmark!.url).replace(/%s/g, encodeURIComponent(content.trim()))
+  return normalizeUrl(buildContentJumpUrl(props.bookmark!.url, content))
 }
 
 function open() {
@@ -134,7 +135,7 @@ function onJumpKeydown(e: KeyboardEvent) {
       <!-- 携带内容跳转：左 logo + 右历史参数 -->
       <div
         v-if="contentJumpEnabled"
-        class="flex flex-1 min-h-0 w-full gap-2"
+        class="flex flex-1 min-h-0 w-full gap-2 p-2"
       >
         <div class="bookmark-jump-logo shrink-0 flex items-center justify-center">
           <img
@@ -200,6 +201,7 @@ function onJumpKeydown(e: KeyboardEvent) {
         v-if="contentJumpEnabled"
         v-model="jumpInput"
         type="text"
+        draggable="false"
         class="bookmark-title-readable w-full shrink-0 px-2 py-1.5 text-sm leading-snug rounded-md bg-white/15 outline-none border border-white/20 focus:border-blue-400/70"
         placeholder="输入后回车跳转"
         @click.stop
@@ -220,12 +222,16 @@ function onJumpKeydown(e: KeyboardEvent) {
 
     <div v-if="!isAdd" class="absolute top-0.5 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
       <button
+        type="button"
+        draggable="false"
         class="w-6 h-6 flex items-center justify-center rounded-full bg-black/40 text-white text-xs hover:bg-black/60"
         @click.stop="emit('edit', bookmark!.id)"
       >
         ✎
       </button>
       <button
+        type="button"
+        draggable="false"
         class="w-6 h-6 flex items-center justify-center rounded-full bg-black/40 text-white text-xs hover:bg-red-500/60"
         @click.stop="emit('delete', bookmark!.id)"
       >

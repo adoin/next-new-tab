@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import type { Bookmark } from '../types'
 import { useBookmarksStore } from '../stores'
+import { hasContentJumpPlaceholder } from '../utils/contentJumpUrl'
 
 const props = defineProps<{
   visible: boolean
@@ -104,7 +105,7 @@ watch(() => props.visible, (v) => {
 
 function onSave() {
   if (!form.value.url) return
-  if (form.value.contentJump && !form.value.url.includes('%s')) {
+  if (form.value.contentJump && !hasContentJumpPlaceholder(form.value.url)) {
     alert('开启「携带内容跳转」时，URL 必须包含 %s 占位符')
     return
   }

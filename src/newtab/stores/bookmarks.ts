@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
 import type { Bookmark } from '../types'
 import { useStorage } from '../composables/useStorage'
 
@@ -21,6 +20,27 @@ function getFaviconUrl(url: string): string {
 }
 
 // Try high-res icon from the site itself, fall back to Google API
+const DOUBAO_CHAT_URL =
+  'https://www.doubao.com/chat/url-action?action={"pluginId":"Send_Message","payload":{"text":"%s"}}'
+
+function createDefaultBookmarks(): Bookmark[] {
+  const url = normalizeUrl(DOUBAO_CHAT_URL)
+  return [
+    {
+      id: 'default-doubao',
+      title: '豆包',
+      description: '',
+      url,
+      icon: getFaviconUrl(url),
+      iconBgColor: 'transparent',
+      colSpan: 2,
+      rowSpan: 1,
+      order: 0,
+      contentJump: true,
+    },
+  ]
+}
+
 async function fetchHighResIcon(url: string): Promise<string> {
   try {
     const hostname = new URL(normalizeUrl(url)).hostname
@@ -43,8 +63,24 @@ export const useBookmarksStore = defineStore('bookmarks', () => {
     }
   }
 
+  function seedDefaultBookmarksIfEmpty() {
+    if (bookmarks.value.length > 0) return
+    bookmarks.value = createDefaultBookmarks()
+    saveNow()
+    const bm = bookmarks.value[0]
+    if (!bm) return
+    const icon = bm.icon
+    fetchHighResIcon(bm.url).then((hiRes) => {
+      if (hiRes && hiRes !== icon) {
+        bm.icon = hiRes
+        saveNow()
+      }
+    })
+  }
+
   ready.then(() => {
     ensureArray()
+    seedDefaultBookmarksIfEmpty()
   })
 
   function saveNow() {
