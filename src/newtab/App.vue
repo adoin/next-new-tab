@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useSettingsStore } from './stores'
 import { useWallpaper } from './composables/useWallpaper'
 import { useTheme } from './composables/useTheme'
@@ -51,17 +51,27 @@ onMounted(() => {
 onUnmounted(() => {
   wallpaper.cleanup()
 })
+
+const bookmarkAreaWidthStyle = computed(() => {
+  const pct = Math.min(90, Math.max(50, settings.settings.bookmarkAreaWidthPercent ?? 85))
+  return {
+    width: `${pct}vw`,
+    maxWidth: '100%',
+  }
+})
 </script>
 
 <template>
   <WallpaperBg :url="wallpaper.current.value?.url" :loading="wallpaper.loading.value">
     <div
-      class="relative z-10 w-full h-full overflow-y-auto flex flex-col items-center pb-20 px-4"
+      class="relative z-10 w-full h-full overflow-y-auto flex flex-col items-center pb-20 px-4 sm:px-6"
       :style="{ paddingTop: `${settings.settings.searchTopMargin}px` }"
     >
-      <SearchBar />
-      <div :style="{ height: `${settings.settings.searchGap}px` }" />
-      <BookmarkGrid @edit="onEditBookmark" @add="onAddBookmark" />
+      <div class="nnt-main mx-auto flex flex-col items-center shrink-0" :style="bookmarkAreaWidthStyle">
+        <SearchBar />
+        <div class="w-full shrink-0" :style="{ height: `${settings.settings.searchGap}px` }" />
+        <BookmarkGrid @edit="onEditBookmark" @add="onAddBookmark" />
+      </div>
     </div>
   </WallpaperBg>
 

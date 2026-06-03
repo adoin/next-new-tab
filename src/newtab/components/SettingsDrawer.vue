@@ -158,10 +158,27 @@ async function onImportBookmarks() {
               <input v-model.number="settings.settings.searchGap" type="range" min="0" max="200" class="w-full accent-blue-400" />
             </div>
             <div>
-              <label class="text-white/60 text-xs block mb-1">整体缩放 {{ settings.settings.bookmarkScale }}%</label>
-              <input v-model.number="settings.settings.bookmarkScale" type="range" min="50" max="90" class="w-full accent-blue-400" />
+              <label class="text-white/60 text-xs block mb-1">搜索栏宽度 {{ settings.settings.searchBarWidthPercent }}%</label>
+              <input
+                v-model.number="settings.settings.searchBarWidthPercent"
+                type="range"
+                min="28"
+                max="90"
+                class="w-full accent-blue-400"
+              />
             </div>
-            <p class="text-white/40 text-xs -mt-1">缩放整个书签区域，不改变单格逻辑尺寸。</p>
+            <p class="text-white/40 text-xs -mt-1">搜索栏单独占视口宽度比例，与下方标签区宽度无关。</p>
+            <div>
+              <label class="text-white/60 text-xs block mb-1">标签区宽度 {{ settings.settings.bookmarkAreaWidthPercent }}%</label>
+              <input
+                v-model.number="settings.settings.bookmarkAreaWidthPercent"
+                type="range"
+                min="50"
+                max="90"
+                class="w-full accent-blue-400"
+              />
+            </div>
+            <p class="text-white/40 text-xs -mt-1">书签网格区域占视口宽度比例（50%–90%）。</p>
             <div>
               <label class="text-white/60 text-xs block mb-1">列数 {{ settings.settings.gridColumns }}</label>
               <input v-model.number="settings.settings.gridColumns" type="range" min="8" max="36" class="w-full accent-blue-400" />

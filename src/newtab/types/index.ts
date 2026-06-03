@@ -60,7 +60,10 @@ export interface Settings {
   randomAutoRefreshMin: number
   randomLastFetchTime: number
   manualCategoryId: string
-  bookmarkScale: number
+  /** 标签区（搜索栏+书签）占视口宽度百分比，最大 90 */
+  bookmarkAreaWidthPercent: number
+  /** 搜索栏占视口宽度百分比 */
+  searchBarWidthPercent: number
   searchGap: number
   searchTopMargin: number
   gridColumns: number
@@ -80,7 +83,8 @@ export const DEFAULT_SETTINGS: Settings = {
   randomAutoRefreshMin: 30,
   randomLastFetchTime: 0,
   manualCategoryId: '9',
-  bookmarkScale: 70,
+  bookmarkAreaWidthPercent: 85,
+  searchBarWidthPercent: 42,
   searchGap: 40,
   searchTopMargin: 160,
   gridColumns: 12,

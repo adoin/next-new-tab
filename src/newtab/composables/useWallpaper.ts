@@ -49,6 +49,7 @@ export function useWallpaper() {
   // ---- Random wallpaper ----
 
   async function fetchRandom() {
+    const hadWallpaper = !!current.value?.url
     loading.value = true
     error.value = ''
     try {
@@ -81,6 +82,9 @@ export function useWallpaper() {
       error.value = e.message
     } finally {
       loading.value = false
+      if (!current.value?.url && !hadWallpaper) {
+        await restoreSaved()
+      }
     }
   }
 
@@ -106,10 +110,10 @@ export function useWallpaper() {
   async function initRandom() {
     const elapsed = Date.now() - settings.settings.randomLastFetchTime
     const intervalMs = settings.settings.randomAutoRefreshMin * 60 * 1000
-    if (settings.settings.randomLastFetchTime === 0 || elapsed >= intervalMs) {
-      await fetchRandom()
-    } else {
-      await restoreSaved()
+    const needRefresh =
+      settings.settings.randomLastFetchTime === 0 || elapsed >= intervalMs
+    if (needRefresh) {
+      void fetchRandom()
     }
     startAutoRefresh()
   }
@@ -192,16 +196,19 @@ export function useWallpaper() {
   async function initWallpaper() {
     stopAutoRefresh()
     await settings.settingsReady
-    await fetchCategories()
+    await restoreSaved()
+
+    const categoriesTask = fetchCategories()
+
     if (settings.settings.wallpaperMode === 'random') {
       await initRandom()
     } else if (manualWallpaperChosen.value) {
       await initManual()
     } else {
-      // manual mode but no wallpaper chosen yet — treat as random
-      await restoreSaved()
       startAutoRefresh()
     }
+
+    await categoriesTask
   }
 
   // Watch mode changes

@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useSearch } from '../composables/useSearch'
+import { useSettingsStore } from '../stores'
 import { useTheme } from '../composables/useTheme'
 
 const { search } = useSearch()
+const settings = useSettingsStore()
 const { colors } = useTheme()
 const query = ref('')
+
+const widthStyle = computed(() => {
+  const pct = Math.min(90, Math.max(28, settings.settings.searchBarWidthPercent ?? 42))
+  return {
+    width: `${pct}vw`,
+    maxWidth: '100%',
+  }
+})
 
 const shadowFlood = computed(() => colors.value.searchShadowFlood)
 
@@ -15,7 +25,7 @@ function onSubmit() {
 </script>
 
 <template>
-  <div class="relative w-full max-w-xl mx-auto">
+  <div class="relative mx-auto shrink-0" :style="widthStyle">
     <form class="glass search-bar flex items-center gap-3 px-4 py-2.5" @submit.prevent="onSubmit">
       <input
         v-model="query"

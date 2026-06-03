@@ -101,13 +101,7 @@ function onDragEnd() {
 </script>
 
 <template>
-  <div
-    class="w-full max-w-6xl mx-auto"
-    :style="{
-      transform: `scale(${settings.settings.bookmarkScale / 100})`,
-      transformOrigin: 'top center',
-    }"
-  >
+  <div class="w-full">
     <div class="bookmark-grid w-full grid" :style="gridStyle">
       <div
         v-for="bm in sortedBookmarks"
