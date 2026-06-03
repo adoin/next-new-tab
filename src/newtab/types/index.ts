@@ -66,7 +66,6 @@ export interface Settings {
   gridColumns: number
   cardRadius: number
   bookmarkCardSize: number
-  cardPadding: number
   bookmarkIconSize: number
   bookmarkOpenMode: 'newTab' | 'currentTab'
   /** 书签标题使用流动彩虹渐变字 */
@@ -87,7 +86,6 @@ export const DEFAULT_SETTINGS: Settings = {
   gridColumns: 12,
   cardRadius: 12,
   bookmarkCardSize: 100,
-  cardPadding: 4,
   bookmarkIconSize: 90,
   bookmarkOpenMode: 'newTab',
   rainbowTitles: false,

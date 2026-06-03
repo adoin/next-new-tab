@@ -8,17 +8,15 @@ import { useSettingsStore } from '../stores'
 import type { Bookmark } from '../types'
 import { buildContentJumpUrl } from '../utils/contentJumpUrl'
 import BookmarkJumpHistoryItem from './BookmarkJumpHistoryItem.vue'
-
-const GRID_GAP_X = 12
-const GRID_GAP_Y = 16
+import { bookmarkGlassHeight, bookmarkSpannedWidthCss } from '../utils/bookmarkCellLayout'
 
 const props = defineProps<{
   bookmark?: Bookmark
   isAdd?: boolean
-  scale: number
+  /** 占列数；≥2 时宽度与「N 个 1×1+间距」一致，1 列时为 cardSize */
+  colSpan?: number
   radius: number
   cardSize: number
-  cardPadding: number
 }>()
 
 const emit = defineEmits<{
@@ -36,19 +34,23 @@ const rainbowTitles = computed(() => settings.settings.rainbowTitles === true)
 const contentJumpEnabled = computed(() => !props.isAdd && props.bookmark?.contentJump === true)
 const imageRadius = computed(() => `${props.radius}px`)
 
-const colSpan = computed(() => {
-  if (props.isAdd) return 1
-  const span = props.bookmark!.colSpan || 1
-  return contentJumpEnabled.value ? Math.max(2, span) : span
-})
 const rowSpan = computed(() => (props.isAdd ? 1 : props.bookmark!.rowSpan || 1))
 
-const displayWidth = computed(() =>
-  colSpan.value * props.cardSize + (colSpan.value - 1) * GRID_GAP_X,
-)
-const displayHeight = computed(() =>
-  rowSpan.value * props.cardSize + (rowSpan.value - 1) * GRID_GAP_Y,
-)
+const fillsCellWidth = computed(() => {
+  if (contentJumpEnabled.value) return true
+  return (props.colSpan ?? 1) >= 2
+})
+
+const rootWidthStyle = computed(() => {
+  if (!fillsCellWidth.value) return { width: `${props.cardSize}px` }
+  const span = contentJumpEnabled.value ? Math.max(2, props.colSpan ?? 2) : (props.colSpan ?? 2)
+  return {
+    width: bookmarkSpannedWidthCss(span, props.cardSize),
+    maxWidth: '100%',
+  }
+})
+
+const glassHeight = computed(() => bookmarkGlassHeight(rowSpan.value, props.cardSize))
 
 function refreshJumpHistory() {
   if (props.bookmark?.id) {
@@ -114,19 +116,16 @@ function onJumpKeydown(e: KeyboardEvent) {
 
 <template>
   <div
-    class="flex flex-col items-center gap-1.5 group relative"
-    :style="{ width: `${displayWidth}px` }"
+    class="flex flex-col items-center gap-1.5 group relative min-w-0 max-w-full"
+    :style="rootWidthStyle"
   >
     <div
-      class="glass transition-all duration-200 hover:shadow-xl overflow-hidden flex flex-col box-border"
+      class="glass glass-card transition-all duration-200 overflow-hidden flex flex-col box-border w-full"
       :class="[
         contentJumpEnabled ? 'gap-1.5' : 'cursor-pointer hover:scale-105',
-        isAdd ? '' : 'w-full',
       ]"
       :style="{
-        width: `${displayWidth}px`,
-        height: `${displayHeight}px`,
-        padding: `${cardPadding}px`,
+        height: `${glassHeight}px`,
         borderRadius: `${radius}px`,
         backgroundColor: isAdd ? 'transparent' : (bookmark!.iconBgColor || 'transparent'),
       }"

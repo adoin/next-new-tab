@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia'
 import type { Bookmark } from '../types'
 import { useStorage } from '../composables/useStorage'
+import {
+  parseBookmarksImport,
+  serializeBookmarksForExport,
+} from '../utils/bookmarkDataTransfer'
 
 function normalizeUrl(url: string): string {
   if (!url) return url
@@ -152,5 +156,65 @@ export const useBookmarksStore = defineStore('bookmarks', () => {
     }
   }
 
-  return { bookmarks, addBookmark, updateBookmark, removeBookmark, reorderBookmarks, importFromChrome, flush }
+  function replaceAllBookmarks(next: Bookmark[]) {
+    ensureArray()
+    bookmarks.value = next.map((bm, i) => ({
+      ...bm,
+      id: bm.id || crypto.randomUUID(),
+      order: i,
+      url: normalizeUrl(bm.url),
+      iconBgColor: bm.iconBgColor || 'transparent',
+    }))
+    saveNow()
+  }
+
+  function getExportJson(): string {
+    ensureArray()
+    return serializeBookmarksForExport(bookmarks.value)
+  }
+
+  async function copyBookmarksToClipboard(): Promise<number> {
+    ensureArray()
+    const json = serializeBookmarksForExport(bookmarks.value)
+    await navigator.clipboard.writeText(json)
+    return bookmarks.value.length
+  }
+
+  function importBookmarksList(imported: Bookmark[]) {
+    imported.forEach((bm) => {
+      if (!bm.icon) bm.icon = getFaviconUrl(bm.url)
+    })
+    replaceAllBookmarks(imported)
+    for (const bm of bookmarks.value) {
+      if (!bm.icon) continue
+      const icon = bm.icon
+      fetchHighResIcon(bm.url).then((hiRes) => {
+        if (hiRes && hiRes !== icon) {
+          bm.icon = hiRes
+          saveNow()
+        }
+      })
+    }
+    return imported.length
+  }
+
+  async function importBookmarksFromClipboard(): Promise<number> {
+    const text = await navigator.clipboard.readText()
+    return importBookmarksList(parseBookmarksImport(text))
+  }
+
+  return {
+    bookmarks,
+    addBookmark,
+    updateBookmark,
+    removeBookmark,
+    reorderBookmarks,
+    importFromChrome,
+    replaceAllBookmarks,
+    getExportJson,
+    copyBookmarksToClipboard,
+    importBookmarksList,
+    importBookmarksFromClipboard,
+    flush,
+  }
 })

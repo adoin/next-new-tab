@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useSettingsStore } from '../stores'
+import { useBookmarksStore, useSettingsStore } from '../stores'
 import { RANDOM_WALLPAPER_SOURCES } from '../types'
+import { parseBookmarksImport } from '../utils/bookmarkDataTransfer'
+
+const bookmarks = useBookmarksStore()
 
 defineProps<{ visible: boolean }>()
 
@@ -49,6 +52,32 @@ function onImport(e: Event) {
     }
   }
   reader.readAsText(file)
+}
+
+async function onExportBookmarks() {
+  try {
+    const count = await bookmarks.copyBookmarksToClipboard()
+    alert(`已复制 ${count} 个书签到剪贴板`)
+  } catch {
+    alert('复制失败，请检查是否允许访问剪贴板')
+  }
+}
+
+async function onImportBookmarks() {
+  try {
+    const text = await navigator.clipboard.readText()
+    const preview = parseBookmarksImport(text)
+    const ok = confirm(
+      `剪贴板中有 ${preview.length} 个书签，将替换当前全部书签，是否继续？`,
+    )
+    if (!ok) return
+    const count = bookmarks.importBookmarksList(preview)
+    bookmarks.flush()
+    alert(`已导入 ${count} 个书签`)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '导入失败'
+    alert(msg)
+  }
 }
 </script>
 
@@ -129,9 +158,10 @@ function onImport(e: Event) {
               <input v-model.number="settings.settings.searchGap" type="range" min="0" max="200" class="w-full accent-blue-400" />
             </div>
             <div>
-              <label class="text-white/60 text-xs block mb-1">书签缩放 {{ settings.settings.bookmarkScale }}%</label>
+              <label class="text-white/60 text-xs block mb-1">整体缩放 {{ settings.settings.bookmarkScale }}%</label>
               <input v-model.number="settings.settings.bookmarkScale" type="range" min="50" max="90" class="w-full accent-blue-400" />
             </div>
+            <p class="text-white/40 text-xs -mt-1">缩放整个书签区域，不改变单格逻辑尺寸。</p>
             <div>
               <label class="text-white/60 text-xs block mb-1">列数 {{ settings.settings.gridColumns }}</label>
               <input v-model.number="settings.settings.gridColumns" type="range" min="8" max="36" class="w-full accent-blue-400" />
@@ -145,13 +175,10 @@ function onImport(e: Event) {
               <input v-model.number="settings.settings.cardRadius" type="range" min="0" max="20" class="w-full accent-blue-400" />
             </div>
             <div>
-              <label class="text-white/60 text-xs block mb-1">内边距 {{ settings.settings.cardPadding }}px</label>
-              <input v-model.number="settings.settings.cardPadding" type="range" min="0" max="6" class="w-full accent-blue-400" />
-            </div>
-            <div>
               <label class="text-white/60 text-xs block mb-1">单格大小 {{ settings.settings.bookmarkCardSize }}px</label>
               <input v-model.number="settings.settings.bookmarkCardSize" type="range" min="60" max="300" class="w-full accent-blue-400" />
             </div>
+            <p class="text-white/40 text-xs -mt-1">列宽自动均分；1×1 卡片为固定尺寸，列内剩余空间即卡片间距。跨列卡片铺满对应列宽。</p>
           </div>
         </section>
 
@@ -197,6 +224,23 @@ function onImport(e: Event) {
               <span>&#x1f4e5;</span>
               <span>从浏览器导入书签</span>
             </button>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                class="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+                @click="onExportBookmarks"
+              >
+                导出书签到剪贴板
+              </button>
+              <button
+                type="button"
+                class="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+                @click="onImportBookmarks"
+              >
+                从剪贴板导入
+              </button>
+            </div>
+            <p class="text-white/40 text-xs -mt-1">JSON 格式，导入会替换当前全部书签</p>
             <div class="flex gap-2">
               <button class="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20" @click="onExport">导出配置</button>
               <label class="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 text-center cursor-pointer">

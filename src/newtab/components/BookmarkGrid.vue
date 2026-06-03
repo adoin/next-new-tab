@@ -23,13 +23,22 @@ const sortedBookmarks = computed(() =>
 )
 
 const cardSize = computed(() => settings.settings.bookmarkCardSize || 100)
+const gridColumns = computed(() => settings.settings.gridColumns || 12)
 
-const GRID_GAP_X = 12
-const GRID_GAP_Y = 16
+const gridStyle = computed(() => ({
+  gridTemplateColumns: `repeat(${gridColumns.value}, minmax(0, 1fr))`,
+}))
 
 function effectiveColSpan(bm: { colSpan?: number; contentJump?: boolean }) {
   const span = bm.colSpan || 1
   return bm.contentJump ? Math.max(2, span) : span
+}
+
+function gridItemStyle(bm: { colSpan?: number; rowSpan?: number; contentJump?: boolean }) {
+  return {
+    gridColumn: `span ${Math.min(effectiveColSpan(bm), gridColumns.value)}`,
+    gridRow: `span ${bm.rowSpan || 1}`,
+  }
 }
 
 function isInteractiveDragTarget(target: EventTarget | null) {
@@ -93,32 +102,23 @@ function onDragEnd() {
 
 <template>
   <div
-    class="w-full mx-auto"
+    class="w-full max-w-6xl mx-auto"
     :style="{
       transform: `scale(${settings.settings.bookmarkScale / 100})`,
       transformOrigin: 'top center',
     }"
   >
-    <div
-      class="grid justify-items-center"
-      :style="{
-        gridTemplateColumns: `repeat(${settings.settings.gridColumns}, auto)`,
-        gap: `${GRID_GAP_Y}px ${GRID_GAP_X}px`,
-      }"
-    >
+    <div class="bookmark-grid w-full grid" :style="gridStyle">
       <div
         v-for="bm in sortedBookmarks"
         :key="bm.id"
-        class="bookmark-grid-item"
+        class="bookmark-grid-item flex justify-center items-start min-w-0"
         :class="{
           'bookmark-grid-item--dragging': draggingId === bm.id,
           'bookmark-grid-item--drag-over': dragOverId === bm.id && draggingId !== bm.id,
         }"
+        :style="gridItemStyle(bm)"
         draggable="true"
-        :style="{
-          gridColumn: `span ${effectiveColSpan(bm)}`,
-          gridRow: `span ${bm.rowSpan || 1}`,
-        }"
         @dragstart="onDragStart($event, bm.id)"
         @dragover="onDragOver($event, bm.id)"
         @dragleave="onDragLeave($event, bm.id)"
@@ -127,23 +127,26 @@ function onDragEnd() {
       >
         <BookmarkCard
           :bookmark="bm"
-          :scale="settings.settings.bookmarkScale"
+          :col-span="effectiveColSpan(bm)"
           :radius="settings.settings.cardRadius"
           :card-size="cardSize"
-          :card-padding="settings.settings.cardPadding"
           @edit="emit('edit', $event)"
           @delete="onDelete"
         />
       </div>
 
-      <BookmarkCard
-        is-add
-        :scale="settings.settings.bookmarkScale"
-        :radius="settings.settings.cardRadius"
-        :card-size="cardSize"
-        :card-padding="settings.settings.cardPadding"
-        @add="emit('add')"
-      />
+      <div
+        class="bookmark-grid-item flex justify-center items-start min-w-0"
+        :style="{ gridColumn: 'span 1', gridRow: 'span 1' }"
+      >
+        <BookmarkCard
+          is-add
+          :col-span="1"
+          :radius="settings.settings.cardRadius"
+          :card-size="cardSize"
+          @add="emit('add')"
+        />
+      </div>
     </div>
   </div>
 </template>

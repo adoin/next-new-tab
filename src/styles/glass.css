@@ -7,6 +7,31 @@
   box-shadow: var(--glass-shadow, 0 4px 30px rgba(0, 0, 0, 0.1));
 }
 
+/* 书签卡片：加深阴影，复杂壁纸上更易辨认 */
+.glass-card {
+  box-shadow: var(
+    --glass-card-shadow,
+    0 10px 36px rgba(0, 0, 0, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.25)
+  );
+}
+
+.glass-card:hover {
+  box-shadow: var(
+    --glass-card-shadow,
+    0 10px 36px rgba(0, 0, 0, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.25)
+  ),
+  0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+/* 搜索栏：略深的玻璃底，配合描边阴影保证可读 */
+.search-bar.glass {
+  background: var(--glass-search-bg, rgba(0, 0, 0, 0.4));
+  border-color: var(--glass-search-border, rgba(255, 255, 255, 0.25));
+  box-shadow: var(--glass-shadow), 0 8px 28px rgba(0, 0, 0, 0.25);
+}
+
 .glass-dark {
   background: rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(12px);
