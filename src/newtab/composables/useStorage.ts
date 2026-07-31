@@ -3,6 +3,26 @@ import type { Ref } from 'vue'
 
 type StorageArea = 'sync' | 'local'
 
+function mergeStoredValue<T>(current: T, stored: T, defaultValue: T): T {
+  if (Array.isArray(defaultValue)) {
+    if (Array.isArray(stored)) return stored
+    if (typeof stored === 'object' && stored !== null) {
+      const arr = Object.values(stored)
+      return (arr.length > 0 ? arr : defaultValue) as T
+    }
+    return defaultValue
+  }
+  if (
+    typeof defaultValue === 'object'
+    && defaultValue !== null
+    && typeof stored === 'object'
+    && stored !== null
+  ) {
+    return Object.assign({ ...(current as object) }, stored as object) as T
+  }
+  return stored
+}
+
 // Global write queue: batch multiple storage.set into one call
 const writeQueues: Record<string, Record<string, any>> = { sync: {}, local: {} }
 const writeTimers: Record<string, ReturnType<typeof setTimeout> | null> = { sync: null, local: null }
@@ -52,18 +72,7 @@ export function useStorage<T>(key: string, defaultValue: T, area: StorageArea = 
     const stored = result[key]
 
     if (stored !== undefined && stored !== null) {
-      if (Array.isArray(defaultValue)) {
-        if (Array.isArray(stored)) {
-          data.value = stored as T
-        } else if (typeof stored === 'object') {
-          const arr = Object.values(stored)
-          data.value = arr.length > 0 ? (arr as T) : (defaultValue as T)
-        } else {
-          data.value = defaultValue as T
-        }
-      } else {
-        data.value = stored as T
-      }
+      data.value = mergeStoredValue(data.value, stored as T, defaultValue)
     }
 
     isLoading = false
@@ -81,6 +90,13 @@ export function useStorage<T>(key: string, defaultValue: T, area: StorageArea = 
       const newVal = changes[key].newValue as T
       if (Array.isArray(defaultValue)) {
         if (Array.isArray(newVal)) data.value = newVal
+      } else if (
+        typeof defaultValue === 'object'
+        && defaultValue !== null
+        && typeof newVal === 'object'
+        && newVal !== null
+      ) {
+        Object.assign(data.value as object, newVal as object)
       } else {
         data.value = newVal
       }

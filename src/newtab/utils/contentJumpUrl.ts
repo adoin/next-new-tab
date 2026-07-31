@@ -9,6 +9,21 @@ export function hasContentJumpPlaceholder(url: string): boolean {
   }
 }
 
+/** 从书签 URL 提取站点根地址（protocol + host），用于带参卡片点击 logo 跳转 */
+export function getBookmarkBaseUrl(url: string): string {
+  let normalized = url.trim()
+  if (!normalized) return url
+  if (!/^https?:\/\//i.test(normalized)) {
+    if (/^\/\//.test(normalized)) normalized = `https:${normalized}`
+    else normalized = `https://${normalized}`
+  }
+  try {
+    return new URL(normalized).origin
+  } catch {
+    return normalized
+  }
+}
+
 /** 将占位符替换为编码后的用户输入 */
 export function buildContentJumpUrl(url: string, content: string): string {
   const encoded = encodeURIComponent(content.trim())

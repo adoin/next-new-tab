@@ -6,7 +6,7 @@ import {
 } from '../composables/useContentJumpHistory'
 import { useSettingsStore } from '../stores'
 import type { Bookmark } from '../types'
-import { buildContentJumpUrl } from '../utils/contentJumpUrl'
+import { buildContentJumpUrl, getBookmarkBaseUrl } from '../utils/contentJumpUrl'
 import BookmarkJumpHistoryItem from './BookmarkJumpHistoryItem.vue'
 import { bookmarkGlassHeight, bookmarkSpannedWidthCss } from '../utils/bookmarkCellLayout'
 
@@ -92,6 +92,11 @@ function open() {
   navigateTo(normalizeUrl(props.bookmark!.url))
 }
 
+function openLogoHome() {
+  if (!props.bookmark) return
+  navigateTo(getBookmarkBaseUrl(props.bookmark.url))
+}
+
 function jumpWithContent(content: string) {
   const trimmed = content.trim()
   if (!trimmed || !props.bookmark) return
@@ -136,12 +141,16 @@ function onJumpKeydown(e: KeyboardEvent) {
         v-if="contentJumpEnabled"
         class="flex flex-1 min-h-0 w-full gap-2 p-2"
       >
-        <div class="bookmark-jump-logo shrink-0 flex items-center justify-center">
+        <div
+          class="bookmark-jump-logo shrink-0 flex items-center justify-center cursor-pointer hover:opacity-85 transition-opacity"
+          title="打开网站首页"
+          @click.stop="openLogoHome"
+        >
           <img
             v-if="bookmark!.icon"
             :src="bookmark!.icon"
             :alt="bookmark!.title"
-            class="bookmark-jump-logo__img object-contain w-full h-full"
+            class="bookmark-jump-logo__img object-contain w-full h-full pointer-events-none"
             :style="{ borderRadius: imageRadius }"
             crossorigin="anonymous"
             @error="($event.target as HTMLImageElement).style.display = 'none'"

@@ -2,6 +2,7 @@ import { ref, watch } from 'vue'
 import type { Wallpaper, Wallpaper360Category, Wallpaper360Item } from '../types'
 import { useSettingsStore } from '../stores'
 import { RANDOM_WALLPAPER_SOURCES } from '../types'
+import { findRandomWallpaperSource } from '../utils/randomWallpaperSources'
 
 const PAGE_SIZE = 30
 const IMAGE_STORE_KEY = 'wallpaper-image'
@@ -53,8 +54,9 @@ export function useWallpaper() {
     loading.value = true
     error.value = ''
     try {
-      const source = RANDOM_WALLPAPER_SOURCES.find(
-        (s) => s.id === settings.settings.randomSourceId,
+      const source = findRandomWallpaperSource(
+        settings.settings.randomSourceId,
+        settings.settings.customRandomWallpaperSources,
       ) || RANDOM_WALLPAPER_SOURCES[0]
       const result = await chrome.runtime.sendMessage({
         type: 'RANDOM_WALLPAPER_GET',

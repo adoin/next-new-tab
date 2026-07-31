@@ -4,10 +4,19 @@ export interface Wallpaper {
   source: string
 }
 
+export type RandomWallpaperSourceKind = 'redirect' | 'fetch' | 'bing'
+
 export interface RandomWallpaperSource {
   id: string
   name: string
   url: string
+  /**
+   * redirect: 请求 URL 可直接当图片地址（302 跳转）
+   * fetch: 响应体为图片二进制
+   * bing: 内置 Bing JSON API
+   * 省略时自动按 Content-Type 判断
+   */
+  kind?: RandomWallpaperSourceKind
 }
 
 export interface Wallpaper360Category {
@@ -59,6 +68,8 @@ export interface Settings {
   randomSourceId: string
   randomAutoRefreshMin: number
   randomLastFetchTime: number
+  /** 用户自定义随机壁纸图源，在下拉列表中排在内置图源之前 */
+  customRandomWallpaperSources: RandomWallpaperSource[]
   manualCategoryId: string
   /** 标签区（搜索栏+书签）占视口宽度百分比，最大 90 */
   bookmarkAreaWidthPercent: number
@@ -82,6 +93,7 @@ export const DEFAULT_SETTINGS: Settings = {
   randomSourceId: 'picsum',
   randomAutoRefreshMin: 30,
   randomLastFetchTime: 0,
+  customRandomWallpaperSources: [],
   manualCategoryId: '9',
   bookmarkAreaWidthPercent: 85,
   searchBarWidthPercent: 42,
@@ -96,7 +108,17 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 export const RANDOM_WALLPAPER_SOURCES: RandomWallpaperSource[] = [
-  { id: 'bing', name: 'Bing 每日', url: '' },
+  { id: 'bing', name: 'Bing 每日', url: '', kind: 'bing' },
+  {
+    id: 'luvbree-full',
+    name: 'Luvbree 横屏（全）',
+    url: 'https://www.luvbree.com/api/image/random?isNsfw=true&isLandscape=true&type=1&imageType=compressed',
+  },
+  {
+    id: 'luvbree-sfw',
+    name: 'Luvbree 横屏（安全）',
+    url: 'https://www.luvbree.com/api/image/random?isNsfw=false&isLandscape=true&type=1&imageType=compressed',
+  },
   { id: 'picsum', name: 'Picsum', url: 'https://picsum.photos/1920/1080?random' },
   { id: 'yumehinata', name: 'YumeHinata (Pixiv)', url: 'https://rdimg.yumehinata.com/random-wallpaper' },
   { id: 'paugram', name: 'Paugram', url: 'https://api.paugram.com/wallpaper/' },

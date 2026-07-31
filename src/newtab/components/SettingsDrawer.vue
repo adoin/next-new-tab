@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useBookmarksStore, useSettingsStore } from '../stores'
-import { RANDOM_WALLPAPER_SOURCES } from '../types'
 import { parseBookmarksImport } from '../utils/bookmarkDataTransfer'
+import {
+  createCustomRandomWallpaperSource,
+  getAllRandomWallpaperSources,
+} from '../utils/randomWallpaperSources'
 
 const bookmarks = useBookmarksStore()
 
@@ -15,6 +18,54 @@ const emit = defineEmits<{
 }>()
 
 const settings = useSettingsStore()
+
+const allRandomWallpaperSources = computed(() =>
+  getAllRandomWallpaperSources(settings.settings.customRandomWallpaperSources),
+)
+
+const newSourceName = ref('')
+const newSourceUrl = ref('')
+
+function addCustomWallpaperSource() {
+  const name = newSourceName.value.trim()
+  const url = newSourceUrl.value.trim()
+  if (!name) {
+    alert('请填写图源名称')
+    return
+  }
+  if (!url) {
+    alert('请填写 API URL')
+    return
+  }
+  if (!/^https?:\/\//i.test(url)) {
+    alert('URL 需以 http:// 或 https:// 开头')
+    return
+  }
+  const source = createCustomRandomWallpaperSource(name, url)
+  const existing = Array.isArray(settings.settings.customRandomWallpaperSources)
+    ? settings.settings.customRandomWallpaperSources
+    : []
+  settings.updateSettings({
+    customRandomWallpaperSources: [...existing, source],
+    randomSourceId: source.id,
+  })
+  newSourceName.value = ''
+  newSourceUrl.value = ''
+}
+
+function removeCustomWallpaperSource(id: string) {
+  const current = Array.isArray(settings.settings.customRandomWallpaperSources)
+    ? settings.settings.customRandomWallpaperSources
+    : []
+  const next = current.filter((s) => s.id !== id)
+  const patch: { customRandomWallpaperSources: typeof next; randomSourceId?: string } = {
+    customRandomWallpaperSources: next,
+  }
+  if (settings.settings.randomSourceId === id) {
+    patch.randomSourceId = next[0]?.id ?? allRandomWallpaperSources.value[0]?.id ?? 'picsum'
+  }
+  settings.updateSettings(patch)
+}
 
 const collapsed = ref<Record<string, boolean>>({})
 
@@ -128,9 +179,56 @@ async function onImportBookmarks() {
               <div>
                 <label class="text-white/60 text-xs block mb-1">图源</label>
                 <select v-model="settings.settings.randomSourceId" class="w-full bg-white/10 rounded-lg px-3 py-2 text-white outline-none">
-                  <option v-for="s in RANDOM_WALLPAPER_SOURCES" :key="s.id" :value="s.id">{{ s.name }}</option>
+                  <option v-for="s in allRandomWallpaperSources" :key="s.id" :value="s.id">
+                    {{ s.name }}
+                  </option>
                 </select>
               </div>
+
+              <div class="rounded-lg border border-white/10 p-3 space-y-2">
+                <div class="text-white/70 text-xs font-medium">自定义图源</div>
+                <p class="text-white/40 text-xs">添加后排在列表最前；接口返回图片或 302 跳转均可，会自动识别</p>
+                <ul v-if="settings.settings.customRandomWallpaperSources.length" class="space-y-1.5">
+                  <li
+                    v-for="s in settings.settings.customRandomWallpaperSources"
+                    :key="s.id"
+                    class="flex items-center gap-2 text-sm"
+                  >
+                    <span class="flex-1 text-white/80 truncate" :title="s.url">
+                      {{ s.name }}
+                    </span>
+                    <button
+                      type="button"
+                      class="shrink-0 px-2 py-0.5 rounded text-xs text-red-300 hover:bg-red-500/20"
+                      @click="removeCustomWallpaperSource(s.id)"
+                    >
+                      删除
+                    </button>
+                  </li>
+                </ul>
+                <div class="space-y-2 pt-1">
+                  <input
+                    v-model="newSourceName"
+                    type="text"
+                    placeholder="名称，如：我的图源"
+                    class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                  />
+                  <input
+                    v-model="newSourceUrl"
+                    type="url"
+                    placeholder="https://example.com/api/random"
+                    class="w-full bg-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                  />
+                  <button
+                    type="button"
+                    class="w-full px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+                    @click="addCustomWallpaperSource"
+                  >
+                    添加图源
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label class="text-white/60 text-xs block mb-1">自动刷新间隔 {{ settings.settings.randomAutoRefreshMin }} 分钟</label>
                 <input v-model.number="settings.settings.randomAutoRefreshMin" type="range" min="5" max="120" class="w-full accent-blue-400" />

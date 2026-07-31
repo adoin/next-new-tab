@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useStorage } from '../composables/useStorage'
 import type { Settings } from '../types'
 import { DEFAULT_SETTINGS } from '../types'
+import { normalizeRandomWallpaperSourceArray } from '../utils/randomWallpaperSources'
 
 /** 旧 bookmarkScale(50–100) → 新宽度百分比(50–90) */
 function migrateBookmarkAreaWidth(settings: Settings & { bookmarkScale?: number }) {
@@ -25,8 +26,12 @@ function migrateBookmarkAreaWidth(settings: Settings & { bookmarkScale?: number 
   )
 }
 
+function normalizeCustomSources(s: Settings) {
+  s.customRandomWallpaperSources = normalizeRandomWallpaperSourceArray(s.customRandomWallpaperSources)
+}
+
 export const useSettingsStore = defineStore('settings', () => {
-  const { data: settings, ready: settingsReady } = useStorage<Settings>('settings', { ...DEFAULT_SETTINGS }, 'sync')
+  const { data: settings, ready: settingsReady, flush } = useStorage<Settings>('settings', { ...DEFAULT_SETTINGS }, 'sync')
 
   // Merge missing fields from defaults for existing users
   settingsReady.then(() => {
@@ -42,15 +47,18 @@ export const useSettingsStore = defineStore('settings', () => {
       90,
       Math.max(28, settings.value.searchBarWidthPercent ?? DEFAULT_SETTINGS.searchBarWidthPercent),
     )
+    normalizeCustomSources(settings.value)
   })
 
   function updateSettings(partial: Partial<Settings>) {
     Object.assign(settings.value, partial)
+    flush()
   }
 
   function resetSettings() {
     Object.assign(settings.value, DEFAULT_SETTINGS)
+    flush()
   }
 
-  return { settings, settingsReady, updateSettings, resetSettings }
+  return { settings, settingsReady, updateSettings, resetSettings, flush }
 })
